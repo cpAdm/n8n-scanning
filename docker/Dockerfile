@@ -7,11 +7,11 @@ FROM n8nio/n8n:${N8N_VERSION}
 # TODO needed?
 USER root
 
-# Note that we cannot pin these package version, as Alpine might drop old versions
+# Note that we cannot pin these package versions, as Alpine might drop old versions
 # https://gitlab.alpinelinux.org/alpine/abuild/-/issues/9996
 # https://pkgs.alpinelinux.org/packages
 RUN apk add --no-cache \
-    nmap=${NMAP_VERSION} \
+    nmap \
     masscan \
     zmap
 
