@@ -1,0 +1,33 @@
+services:
+  #  TODO add 'web' service for serving contact page
+
+  # See: https://docs.n8n.io/hosting/installation/server-setups/docker-compose/#6-create-docker-compose-file
+  n8n:
+    image: cpadm:n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+
+    # TODO play with other options (e.g. --network host) as well
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - NODE_ENV=production
+      # TODO add other variables as well (create env.default) - also see logs of docker
+      # Optional security or setup variables:
+      # - N8N_BASIC_AUTH_ACTIVE=true
+      # - N8N_BASIC_AUTH_USER=admin
+      # - N8N_BASIC_AUTH_PASSWORD=supersecret
+      # - TZ=Europe/London
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./local-files:/files
+
+
+volumes:
+  n8n_data:

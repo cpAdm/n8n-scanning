@@ -1,0 +1,41 @@
+name: Test Docker container
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-n8n-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      #      - name: Set up Docker Buildx
+      #        uses: docker/setup-buildx-action@v3
+
+      - name: Build custom Docker image
+        run: docker build -t cpadm:n8n
+        working-directory: ./docker
+
+      - name: Run container in background
+        run: |
+          docker compose -p n8n-scanning up -d
+          # TODO use the readiness or /healthz endpoint
+          sleep 20
+        working-directory: ./docker
+
+      - name: Check if all tools are available inside the container
+        run: |
+          docker exec n8n-scanning-n8n-1 sh -c "nmap --version"
+          docker exec n8n-scanning-n8n-1 sh -c "masscan --version"
+          docker exec n8n-scanning-n8n-1 sh -c "zmap --version"
+
+# TODO
+#      - name: (Optional) Run an n8n workflow
+#        run: |
+#          echo "Triggering internal n8n workflow via API (if configured)..."
+#          curl -s -X POST http://localhost:5678/webhook-test
