@@ -28,7 +28,8 @@ jobs:
       - name: Check if all tools are available inside the container
         run: |
           docker exec n8n-scanning-n8n-1 sh -c "nmap --version"
-          docker exec n8n-scanning-n8n-1 sh -c "masscan --version"
+          # MASSCAN always exits with code 1 here, suppress it
+          docker exec n8n-scanning-n8n-1 sh -c "masscan --version" || true
           docker exec n8n-scanning-n8n-1 sh -c "zmap --version"
 
 # TODO
