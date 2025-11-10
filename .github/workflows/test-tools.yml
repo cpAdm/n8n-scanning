@@ -32,8 +32,10 @@ jobs:
           docker exec n8n-scanning-n8n-1 sh -c "masscan --version" || true
           docker exec n8n-scanning-n8n-1 sh -c "zmap --version"
 
-# TODO
+# TODO Also test with n8n workflow (in combination with our custom nodes)
 #      - name: (Optional) Run an n8n workflow
 #        run: |
 #          echo "Triggering internal n8n workflow via API (if configured)..."
 #          curl -s -X POST http://localhost:5678/webhook-test
+
+# TODO Publish container
