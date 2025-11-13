@@ -17,7 +17,7 @@ services:
       - N8N_HOST=0.0.0.0
       - N8N_PORT=5678
       - NODE_ENV=production
-      # TODO add other variables as well (create env.default) - also see logs of docker
+      # TODO add other variables as well (create env.default) - also see logs of docker for deprecations
       # Optional security or setup variables:
       # - N8N_BASIC_AUTH_ACTIVE=true
       # - N8N_BASIC_AUTH_USER=admin
@@ -26,7 +26,8 @@ services:
 
     volumes:
       - n8n_data:/home/node/.n8n
-      - ./local-files:/files
+      # TODO Although this syncs files, it does not trigger a reload of custom nodes. It needs a container restart.
+      - ./n8n-nodes/dist:/data/custom:cached
 
 
 volumes:

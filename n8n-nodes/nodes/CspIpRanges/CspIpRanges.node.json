@@ -1,0 +1,13 @@
+{
+	"node": "n8n-nodes-ip-ranges-csp",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Utility", "Development", "Data & Storage"],
+	"resources": {
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/cpAdm/n8n-scanning"
+			}
+		]
+	}
+}

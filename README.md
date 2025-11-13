@@ -2,7 +2,25 @@
 
 ## Docker container
 
-See `/docker` for details on how to get a working container with N8N and the scanning tools.
+Get a working container with N8N and the scanning tools.
+
+Build container:
+```shell
+docker build -t cpadm:n8n .
+```
+
+[//]: # (// TODO Move commands to top-level package-json? Then also use that inside the test GitHub workflow?)
+
+Start container:
+```shell
+docker compose -p n8n-scanning up -d
+```
+
+Stop container
+```shell
+docker compose down
+```
+
 
 ## Custom N8N nodes
 

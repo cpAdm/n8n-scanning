@@ -1,9 +1,8 @@
 name: Test Docker container
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+  push:
     branches: [ main ]
 
 jobs:
@@ -16,14 +15,12 @@ jobs:
 
       - name: Build custom Docker image
         run: docker build -t cpadm:n8n .
-        working-directory: ./docker
 
       - name: Run container in background
         run: |
           docker compose -p n8n-scanning up -d
           # TODO use the readiness or /healthz endpoint
           sleep 20
-        working-directory: ./docker
 
       - name: Check if all tools are available inside the container
         run: |

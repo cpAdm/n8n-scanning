@@ -15,8 +15,18 @@ RUN apk add --no-cache \
     masscan \
     zmap
 
-# Switch back to the default non-root user
-# TODO save user name instead, and load here?
-USER node
+# Compile our n8n-nodes and add them as well
+COPY /n8n-nodes /tmp/custom-nodes
+WORKDIR /tmp/custom-nodes
+RUN npm ci --include=dev
+RUN npm run build
 
+ENV N8N_CUSTOM_EXTENSIONS=/data/custom
+RUN mkdir -p /data/custom && cp -r dist/* /data/custom/
+WORKDIR /
+
+# TODO Investigate if we can make the image smaller (muliti-stage builds)
+
+# Switch back to the default non-root user
 # Do not change the CMD and ENTRYPOINT from the base image
+USER node
