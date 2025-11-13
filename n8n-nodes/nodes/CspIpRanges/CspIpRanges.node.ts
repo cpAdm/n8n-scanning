@@ -8,7 +8,7 @@ import { NodeConnectionTypes } from 'n8n-workflow';
 
 const CSP_OPTIONS = [
 	{
-		name: 'Amazon Web services',
+		name: 'Amazon Web Services',
 		value: 'AWS',
 	},
 	{
