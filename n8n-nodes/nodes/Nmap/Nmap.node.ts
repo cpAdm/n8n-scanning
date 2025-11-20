@@ -70,7 +70,8 @@ export class Nmap implements INodeType {
 		usableAsTool: true,
 		properties: [
 			{
-				displayName: 'Use with caution. Only use trusted inputs to prevent cmd injection.',
+				displayName:
+					'Use with caution, only use trusted inputs!<br><br>If the workflow is inactive, this node will return fake data.',
 				name: 'notice',
 				type: 'notice',
 				default: '',
@@ -92,7 +93,7 @@ export class Nmap implements INodeType {
 				validateType: 'array',
 				default: [],
 				description:
-					'List of hosts to scan.\nEntries can be in any of the formats accepted by Nmap',
+					'List of hosts to scan.<br><br>Entries can be in any of the formats accepted by Nmap',
 			},
 			{
 				displayName: 'Excluded Target List',
@@ -102,7 +103,7 @@ export class Nmap implements INodeType {
 				validateType: 'array',
 				default: [],
 				description:
-					'List of hosts to be excluded from the scan.\nEntries can be in any of the formats accepted by Nmap',
+					'List of hosts to be excluded from the scan.<br><br> Entries can be in any of the formats accepted by Nmap',
 			},
 		],
 	};
@@ -134,6 +135,7 @@ export class Nmap implements INodeType {
 				`nmap ${cmdOptions} -oX ${xmlOutputFilename} -iL ${targetFilename} --excludefile ${excludedTargetsFilename}`,
 			);
 		} else {
+			// TODO return dummy data
 			res = emptyReturnData();
 		}
 
