@@ -1,11 +1,15 @@
-import type {
+import {
 	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	NodeConnectionTypes,
+	NodeOperationError,
 } from 'n8n-workflow';
-import { NodeConnectionTypes } from 'n8n-workflow';
 
+// TODO Add tests
+
+// TODO other CSPs
 const CSP_OPTIONS = [
 	{
 		name: 'Amazon Web Services',
@@ -23,12 +27,215 @@ const CSP_OPTIONS = [
 		name: 'Cloudflare',
 		value: 'cloudflare',
 	},
-	{
-		name: 'IBM Cloud',
-		value: 'IBM',
-	},
+	// TODO IBM is a bit more tricky. There is no JSON file, just the markdown of their documentation:
+	// https://github.com/ibm-cloud-docs/infrastructure-hub/blob/master/ips.md
+	// (we could maybe decouple this into a separate repo that updates daily?)
+	// {
+	// 	name: 'IBM Cloud',
+	// 	value: 'IBM',
+	// },
 ] as const;
 type CSPValue = (typeof CSP_OPTIONS)[number]['value'];
+
+type AwsData = {
+	syncToken: string;
+	createDate: string;
+	prefixes: {
+		ip_prefix: string;
+		region: string;
+		service: string;
+		network_border_group: string;
+	}[];
+	ipv6_prefixes: {
+		ipv6_prefix: string;
+		region: string;
+		service: string;
+		network_border_group: string;
+	}[];
+};
+
+type GcpData = {
+	syncToken: string;
+	creationTime: string;
+	prefixes: (
+		| {
+				ipv4Prefix: string;
+				service: string;
+				scope: string;
+		  }
+		| {
+				ipv6Prefix: string;
+				service: string;
+				scope: string;
+		  }
+	)[];
+};
+
+type AzureData = {
+	changeNumber: number;
+	cloud: 'Public';
+	values: {
+		name: string;
+		id: string;
+		properties: {
+			changeNumber: number;
+			region: string;
+			regionId: number;
+			platform: string;
+			systemService: string;
+			addressPrefixes: string[];
+			networkFeatures: string[] | null;
+		};
+	}[];
+};
+
+type CloudflareData = {
+	result: {
+		etag: string;
+		ipv4_cidrs: string[];
+		ipv6_cidrs: string[];
+		jdcloud_cidrs: string[];
+	};
+	success: boolean;
+	errors: unknown;
+	messages: unknown;
+};
+
+// TODO Check if this is a good data format
+type PrefixData = {
+	csp: CSPValue;
+	ipPrefix: string;
+	ipVersion?: 4 | 6;
+	/** Also known as 'scope' */
+	region?: string;
+	service: string;
+};
+
+async function getIpRangesForCSP(
+	functions: IExecuteFunctions,
+	provider: CSPValue,
+): Promise<PrefixData[] | null> {
+	// TODO Check for all providers if we retrieve all kind of service IP's. Maybe have this as additional node option?
+
+	if (provider === 'GCP') {
+		// https://support.google.com/a/answer/10026322?hl=en-419
+		const data = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: 'https://www.gstatic.com/ipranges/cloud.json',
+		})) as GcpData;
+
+		return data.prefixes.map((entry) => ({
+			csp: 'GCP',
+			ipPrefix: 'ipv4Prefix' in entry ? entry.ipv4Prefix : entry.ipv6Prefix,
+			ipVersion: 'ipv4Prefix' in entry ? 4 : 6,
+			region: entry.scope,
+			service: entry.service,
+		}));
+	}
+
+	if (provider === 'AWS') {
+		// https://docs.aws.amazon.com/vpc/latest/userguide/aws-ip-ranges.html
+		const data = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: 'https://ip-ranges.amazonaws.com/ip-ranges.json',
+		})) as AwsData;
+
+		const ipv4Data: PrefixData[] = data.prefixes.map((entry) => ({
+			csp: 'AWS',
+			ipPrefix: entry.ip_prefix,
+			ipVersion: 4,
+			region: entry.region,
+			service: entry.service,
+		}));
+
+		const ipv6Data: PrefixData[] = data.ipv6_prefixes.map((entry) => ({
+			csp: 'AWS',
+			ipPrefix: entry.ipv6_prefix,
+			ipVersion: 6,
+			region: entry.region,
+			service: entry.service,
+		}));
+
+		return [...ipv4Data, ...ipv6Data];
+	}
+
+	if (provider === 'azure') {
+		// There is no public REST API, so find the newest download url via the website (changes weekly)
+		// https://www.microsoft.com/en-us/download/details.aspx?id=56519
+
+		const url = 'https://www.microsoft.com/en-us/download/details.aspx?id=56519';
+		const pageHtml = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: url,
+		})) as string;
+
+		const jsonUrlMatch = pageHtml.match(
+			/https:\/\/download\.microsoft\.com\/[^"]*ServiceTags_Public[^"]*\.json/,
+		);
+		if (!jsonUrlMatch) {
+			throw new NodeOperationError(functions.getNode(), 'Azure link not found', {
+				description: `Failed to find Azure ranges download link on ${url}`,
+			});
+		}
+
+		const downloadUrl = jsonUrlMatch[0];
+		const data = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: downloadUrl,
+		})) as AzureData;
+
+		const result: PrefixData[] = [];
+		for (const entry of data.values) {
+			for (const prefix of entry.properties.addressPrefixes) {
+				result.push({
+					csp: 'azure',
+					ipPrefix: prefix,
+					region: entry.properties.region,
+					service: entry.name,
+				});
+			}
+		}
+
+		return result;
+	}
+
+	if (provider === 'cloudflare') {
+		// https://www.cloudflare.com/ips/
+		const data = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: 'https://api.cloudflare.com/client/v4/ips?networks=jdcloud',
+		})) as CloudflareData;
+
+		const result: PrefixData[] = [];
+		data.result.ipv4_cidrs.forEach((prefix) =>
+			result.push({
+				csp: 'cloudflare',
+				ipPrefix: prefix,
+				ipVersion: 4,
+				service: 'CLOUDFLARE',
+			}),
+		);
+		data.result.ipv6_cidrs.forEach((prefix) =>
+			result.push({
+				csp: 'cloudflare',
+				ipPrefix: prefix,
+				ipVersion: 6,
+				service: 'CLOUDFLARE',
+			}),
+		);
+		data.result.jdcloud_cidrs.forEach((prefix) =>
+			result.push({
+				csp: 'cloudflare',
+				ipPrefix: prefix,
+				service: 'JD_CLOUD',
+			}),
+		);
+
+		return result;
+	}
+
+	return null;
+}
 
 export class CspIpRanges implements INodeType {
 	description: INodeTypeDescription = {
@@ -54,29 +261,20 @@ export class CspIpRanges implements INodeType {
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		// const items = this.getInputData();
-
-		const providers = this.getNodeParameter('CSPs', 0) as CSPValue[];
-		// TODO Find suitable data format
-		const result = [];
+		const providers = this.getNodeParameter('CSPs', 0) as string[];
+		const result: PrefixData[] = [];
 
 		for (const provider of providers) {
-			if (provider === 'GCP') {
-				// Google: https://support.google.com/a/answer/10026322?hl=en-419
-				const response = await this.helpers.httpRequest({
-					method: 'GET',
-					url: 'https://www.gstatic.com/ipranges/cloud.json',
-				});
-				result.push({
-					[provider]: response,
+			const data = await getIpRangesForCSP(this, provider as CSPValue);
+			if (data === null) {
+				throw new NodeOperationError(this.getNode(), 'Invalid CSP', {
+					description: `Found unsupported CSP: '${provider}'`,
 				});
 			}
 
-			// TODO other CSP's
-
-			// TODO error message if unknown
+			result.push(...data);
 		}
 
-		return [this.helpers.returnJsonArray(await Promise.all(result))];
+		return [this.helpers.returnJsonArray(result)];
 	}
 }
