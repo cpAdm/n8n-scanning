@@ -2,7 +2,7 @@
   "name": "n8n-nodes-ip-ranges-csp",
   "private": "true",
   "version": "0.1.0",
-  "description": "N8N action node to retrieve IP ranges belonging to certain CSPs.",
+  "description": "Includes N8N action nodes to retrieve IP ranges belonging to certain CSPs and perform scanning.",
   "license": "MIT",
   "keywords": [
     "n8n-community-node-package"
@@ -28,20 +28,24 @@
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
-    "strict": true,
+    "strict": false,
     "credentials": [],
     "nodes": [
-      "dist/nodes/CspIpRanges/CspIpRanges.node.js"
+      "dist/nodes/CspIpRanges/CspIpRanges.node.js",
+      "dist/nodes/Nmap/Nmap.node.js"
     ]
   },
   "devDependencies": {
     "@n8n/node-cli": "*",
+    "@types/node": "^24.10.1",
+    "@types/xml2js": "^0.4.14",
     "eslint": "9.32.0",
     "prettier": "3.6.2",
     "release-it": "^19.0.4",
     "typescript": "5.9.2"
   },
   "peerDependencies": {
-    "n8n-workflow": "*"
+    "n8n-workflow": "*",
+    "xml2js": "*"
   }
 }
