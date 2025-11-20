@@ -34,7 +34,7 @@ export class CspIpRanges implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'IP Ranges: CSPs',
 		name: 'cspIpRanges',
-		icon: { light: 'file:csp-ip-ranges.svg', dark: 'file:csp-ip-ranges.dark.svg' }, // TODO change
+		icon: 'file:cloud-download.svg',
 		group: ['input'],
 		version: 1, // Should be in sync with the node.json file
 		description: 'Retrieve the IP ranges from the selected CSPs',
