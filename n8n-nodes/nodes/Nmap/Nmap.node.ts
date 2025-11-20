@@ -64,7 +64,9 @@ export class Nmap implements INodeType {
 		group: ['transform'],
 		version: 1, // Should be in sync with the node.json file
 		description: 'Perform scans with the network scanner Nmap',
-		defaults: {},
+		defaults: {
+			name: 'Nmap',
+		},
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,

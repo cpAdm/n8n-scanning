@@ -245,7 +245,9 @@ export class CspIpRanges implements INodeType {
 		group: ['input'],
 		version: 1, // Should be in sync with the node.json file
 		description: 'Retrieve the IP ranges from the selected CSPs',
-		defaults: {},
+		defaults: {
+			name: 'IP Ranges: CSPs',
+		},
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
