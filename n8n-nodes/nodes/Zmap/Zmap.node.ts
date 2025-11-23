@@ -84,23 +84,24 @@ export class Zmap implements INodeType {
 		await fs.writeFile(path.join(cwd, targetFilename), targets.join(EOL));
 		await fs.writeFile(path.join(cwd, excludedTargetsFilename), excludedTargets.join(EOL));
 
-		let res;
+		let res = emptyReturnData();
+		let data = [];
 		if (isWorkflowActive) {
 			res = await execPromise(
 				cwd,
 				`zmap ${cmdOptions} --output-module=json -o ${jsonOutputFilename} ---list-of-ips-file ${targetFilename} --blocklist-file ${excludedTargetsFilename}`,
 			);
+			const fileData = await fs.readFile(path.join(cwd, jsonOutputFilename), { encoding: 'utf8' });
+			data = fileData.split('\n').map((el) => JSON.parse(el));
 		} else {
 			// TODO return dummy data
-			res = emptyReturnData();
 		}
 
-		const fileData = await fs.readFile(path.join(cwd, jsonOutputFilename), { encoding: 'utf8' });
 		result.push({
 			active: isWorkflowActive,
 			ouput: res,
 			targets: targets,
-			data: fileData.split('\n').map((el) => JSON.parse(el)),
+			data: data,
 		});
 
 		return [this.helpers.returnJsonArray(await Promise.all(result))];

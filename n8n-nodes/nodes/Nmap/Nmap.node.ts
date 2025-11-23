@@ -91,24 +91,25 @@ export class Nmap implements INodeType {
 		await fs.writeFile(path.join(cwd, targetFilename), targets.join(EOL));
 		await fs.writeFile(path.join(cwd, excludedTargetsFilename), excludedTargets.join(EOL));
 
-		let res;
+		let res = emptyReturnData();
+		let data = {};
 		if (isWorkflowActive) {
 			res = await execPromise(
 				cwd,
 				`nmap ${cmdOptions} -oX ${xmlOutputFilename} -iL ${targetFilename} --excludefile ${excludedTargetsFilename}`,
 			);
+			const fileData = await fs.readFile(path.join(cwd, xmlOutputFilename), { encoding: 'utf8' });
+			const xmlData = fileData.replace(/(\r\n|\n|\r)/gm, ''); // TODO find nicer solution
+			data = (await xmlToJson(xmlData)) as object;
 		} else {
 			// TODO return dummy data
-			res = emptyReturnData();
 		}
 
-		const fileData = await fs.readFile(path.join(cwd, xmlOutputFilename), { encoding: 'utf8' });
-		const xmlData = fileData.replace(/(\r\n|\n|\r)/gm, ''); // TODO find nicer solution
 		result.push({
 			active: isWorkflowActive,
 			ouput: res,
 			targets: targets,
-			data: (await xmlToJson(xmlData)) as object,
+			data: data,
 		});
 
 		return [this.helpers.returnJsonArray(await Promise.all(result))];
