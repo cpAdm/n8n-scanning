@@ -89,7 +89,7 @@ export class Zmap implements INodeType {
 		if (isWorkflowActive) {
 			res = await execPromise(
 				cwd,
-				`zmap ${cmdOptions} --output-module=json -o ${jsonOutputFilename} ---list-of-ips-file ${targetFilename} --blocklist-file ${excludedTargetsFilename}`,
+				`zmap ${cmdOptions} --output-module=json -o ${jsonOutputFilename} --list-of-ips-file ${targetFilename} --blocklist-file ${excludedTargetsFilename}`,
 			);
 			const fileData = await fs.readFile(path.join(cwd, jsonOutputFilename), { encoding: 'utf8' });
 			data = fileData.split('\n').map((el) => JSON.parse(el));
@@ -104,6 +104,6 @@ export class Zmap implements INodeType {
 			data: data,
 		});
 
-		return [this.helpers.returnJsonArray(await Promise.all(result))];
+		return [this.helpers.returnJsonArray(result)];
 	}
 }

@@ -112,6 +112,6 @@ export class Nmap implements INodeType {
 			data: data,
 		});
 
-		return [this.helpers.returnJsonArray(await Promise.all(result))];
+		return [this.helpers.returnJsonArray(result)];
 	}
 }
