@@ -1,4 +1,3 @@
-import { exec } from 'child_process';
 import os from 'os';
 import type {
 	IExecuteFunctions,
@@ -11,49 +10,11 @@ import * as fs from 'node:fs/promises';
 import path from 'node:path';
 import { parseStringPromise } from 'xml2js';
 import { EOL } from 'node:os';
-
-interface IExecReturnData {
-	exitCode: number;
-	error?: Error;
-	stderr: string;
-	stdout: string;
-}
-
-function emptyReturnData(): IExecReturnData {
-	return {
-		error: undefined,
-		exitCode: 0,
-		stderr: '',
-		stdout: '',
-	};
-}
+import { emptyReturnData, execPromise } from '../../utils/command';
 
 // We leverage 'xml2js' (used by n8n) to convert the XML
 function xmlToJson(xml: string) {
 	return parseStringPromise(xml, { mergeAttrs: true, explicitArray: false });
-}
-
-/**
- * Promisifiy exec manually to also get the exit code
- * (copied from n8n's ExecuteCommand.node.ts)
- */
-async function execPromise(cwd: string, command: string): Promise<IExecReturnData> {
-	const returnData = emptyReturnData();
-
-	return await new Promise((resolve) => {
-		exec(command, { cwd: cwd }, (error, stdout, stderr) => {
-			returnData.stdout = stdout.trim();
-			returnData.stderr = stderr.trim();
-
-			if (error) {
-				returnData.error = error;
-			}
-
-			resolve(returnData);
-		}).on('exit', (code) => {
-			returnData.exitCode = code || 0;
-		});
-	});
 }
 
 export class Nmap implements INodeType {
