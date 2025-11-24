@@ -1,5 +1,8 @@
 name: Update n8n version
 
+# This workflow requires the following setting to be true:
+# Settings -> Actions -> Workflow permissions: "Allow GitHub Actions to create and approve pull requests"
+
 on:
   schedule:
     - cron: "0 6 * * *"   # runs daily at 06:00 UTC
@@ -26,9 +29,14 @@ jobs:
               owner: "n8n-io",
               repo: "n8n"
             });
+
             // Extract version from tag (e.g. "n8n@1.120.4")
             const match = release.tag_name.match(/\d+\.\d+\.\d+/);
-            return { tag: match[0] };
+            if (!match?.[0]) {
+              core.setFailed(`Could not extract version from tag: ${release.tag_name}`);
+              return;
+            }
+            core.setOutput("tag", match[0]);
 
       - name: Read current version from Dockerfile
         id: current
