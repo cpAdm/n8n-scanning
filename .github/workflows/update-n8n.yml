@@ -5,6 +5,10 @@ on:
     - cron: "0 6 * * *"   # runs daily at 06:00 UTC
   workflow_dispatch:      # allow a manual trigger
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
@@ -22,7 +26,9 @@ jobs:
               owner: "n8n-io",
               repo: "n8n"
             });
-            return { tag: release.tag_name.replace(/^v/, "") };
+            // Extract version from tag (e.g. "n8n@1.120.4")
+            const match = release.tag_name.match(/\d+\.\d+\.\d+/);
+            return { tag: match[0] };
 
       - name: Read current version from Dockerfile
         id: current
