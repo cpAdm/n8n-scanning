@@ -7,10 +7,9 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
 import * as fs from 'node:fs/promises';
-import path from 'node:path';
 import { parseStringPromise } from 'xml2js';
-import { EOL } from 'node:os';
-import { emptyReturnData, execPromise } from '../../utils/command';
+import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
+import { writeTempFile } from '../../utils/file';
 
 // We leverage 'xml2js' (used by n8n) to convert the XML
 function xmlToJson(xml: string) {
@@ -82,23 +81,18 @@ export class Nmap implements INodeType {
 		// TODO Find suitable data format
 		const result = [];
 
-		// We cannot use process.cwd() as current user does not have write permissions there
-		const cwd = os.tmpdir();
-
-		const xmlOutputFilename = 'scan.xml';
-		const targetFilename = 'target_list.txt';
-		const excludedTargetsFilename = 'excluded_target_list.txt';
-		await fs.writeFile(path.join(cwd, targetFilename), targets.join(EOL));
-		await fs.writeFile(path.join(cwd, excludedTargetsFilename), excludedTargets.join(EOL));
+		const xmlOutputFile = await writeTempFile('', 'xml');
+		const targetFile = await writeTempFile(targets.join(os.EOL), 'txt');
+		const excludedTargetsFile = await writeTempFile(excludedTargets.join(os.EOL), 'txt');
 
 		let res = emptyReturnData();
 		let data = {};
 		if (isWorkflowActive) {
-			res = await execPromise(
-				cwd,
-				`nmap ${cmdOptions} -oX ${xmlOutputFilename} -iL ${targetFilename} --excludefile ${excludedTargetsFilename}`,
+			// TODO Some options like -sn seems to require sudo rights?
+			res = await execPromiseInTmp(
+				`nmap ${cmdOptions} -oX ${xmlOutputFile} -iL ${targetFile} --excludefile ${excludedTargetsFile}`,
 			);
-			const fileData = await fs.readFile(path.join(cwd, xmlOutputFilename), { encoding: 'utf8' });
+			const fileData = await fs.readFile(xmlOutputFile, { encoding: 'utf8' });
 			const xmlData = fileData.replace(/(\r\n|\n|\r)/gm, ''); // TODO find nicer solution
 			data = (await xmlToJson(xmlData)) as object;
 		} else {
@@ -107,7 +101,7 @@ export class Nmap implements INodeType {
 
 		result.push({
 			active: isWorkflowActive,
-			ouput: res,
+			output: res,
 			targets: targets,
 			data: data,
 		});

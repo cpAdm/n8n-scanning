@@ -1,4 +1,4 @@
-import os from 'os';
+import os from 'node:os';
 import type {
 	IExecuteFunctions,
 	INodeExecutionData,
@@ -7,9 +7,8 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
 import * as fs from 'node:fs/promises';
-import path from 'node:path';
-import { EOL } from 'node:os';
-import { emptyReturnData, execPromise } from '../../utils/command';
+import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
+import { writeTempFile } from '../../utils/file';
 
 export class Zmap implements INodeType {
 	description: INodeTypeDescription = {
@@ -74,24 +73,17 @@ export class Zmap implements INodeType {
 		// TODO Find suitable data format
 		const result = [];
 
-		// We cannot use process.cwd() as current user does not have write permissions there
-		const cwd = os.tmpdir();
-
-		// TODO move to utils, and randomize file name since folder is shared?
-		const jsonOutputFilename = 'scan.json';
-		const targetFilename = 'target_list.txt';
-		const excludedTargetsFilename = 'excluded_target_list.txt';
-		await fs.writeFile(path.join(cwd, targetFilename), targets.join(EOL));
-		await fs.writeFile(path.join(cwd, excludedTargetsFilename), excludedTargets.join(EOL));
+		const jsonOutputFile = await writeTempFile('', 'json');
+		const targetFile = await writeTempFile(targets.join(os.EOL), 'txt');
+		const excludedTargetsFile = await writeTempFile(excludedTargets.join(os.EOL), 'txt');
 
 		let res = emptyReturnData();
 		let data = [];
 		if (isWorkflowActive) {
-			res = await execPromise(
-				cwd,
-				`zmap ${cmdOptions} --output-module=json -o ${jsonOutputFilename} --list-of-ips-file ${targetFilename} --blocklist-file ${excludedTargetsFilename}`,
+			res = await execPromiseInTmp(
+				`zmap ${cmdOptions} --output-module=json -o ${jsonOutputFile} --list-of-ips-file ${targetFile} --blocklist-file ${excludedTargetsFile}`,
 			);
-			const fileData = await fs.readFile(path.join(cwd, jsonOutputFilename), { encoding: 'utf8' });
+			const fileData = await fs.readFile(jsonOutputFile, { encoding: 'utf8' });
 			data = fileData.split('\n').map((el) => JSON.parse(el));
 		} else {
 			// TODO return dummy data
@@ -99,7 +91,7 @@ export class Zmap implements INodeType {
 
 		result.push({
 			active: isWorkflowActive,
-			ouput: res,
+			output: res,
 			targets: targets,
 			data: data,
 		});
