@@ -1,0 +1,57 @@
+name: Update n8n version
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # runs daily at 06:00 UTC
+  workflow_dispatch:      # allow a manual trigger
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Fetch latest n8n release
+        id: fetch
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.getLatestRelease({
+              owner: "n8n-io",
+              repo: "n8n"
+            });
+            return { tag: release.tag_name.replace(/^v/, "") };
+
+      - name: Read current version from Dockerfile
+        id: current
+        run: |
+          CURRENT=$(grep -oP 'ARG N8N_VERSION=\K[0-9.]*' Dockerfile)
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        id: compare
+        run: |
+          if [ "${{ steps.fetch.outputs.tag }}" = "${{ steps.current.outputs.current }}" ]; then
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+            echo "Already up to date."
+          else
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Dockerfile
+        if: steps.compare.outputs.update_needed == 'true'
+        run: |
+          sed -i "s/ARG N8N_VERSION=.*/ARG N8N_VERSION=${{ steps.fetch.outputs.tag }}/" Dockerfile
+
+      - name: Create PR
+        if: steps.compare.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "build: Update n8n to ${{ steps.fetch.outputs.tag }}"
+          sign-commits: true
+          branch: update-n8n-${{ steps.fetch.outputs.tag }}
+          title: "build: Update n8n to ${{ steps.fetch.outputs.tag }}"
+          body: "Automated update to the latest n8n release."
+          labels: auto-update
