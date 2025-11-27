@@ -14,11 +14,22 @@ permissions:
 
 jobs:
   check-and-update:
+    name: Check for n8n updates
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Switch to update-n8n branch (create if missing)
+        run: |
+          if git show-ref --verify --quiet refs/heads/update-n8n; then
+            git checkout update-n8n
+          else
+            git checkout -b update-n8n
+          fi
 
       - name: Fetch latest n8n release
         id: fetch
@@ -49,7 +60,6 @@ jobs:
         run: |
           if [ "${{ steps.fetch.outputs.tag }}" = "${{ steps.current.outputs.current }}" ]; then
             echo "update_needed=false" >> $GITHUB_OUTPUT
-            echo "Already up to date."
           else
             echo "update_needed=true" >> $GITHUB_OUTPUT
           fi
@@ -59,13 +69,13 @@ jobs:
         run: |
           sed -i "s/ARG N8N_VERSION=.*/ARG N8N_VERSION=${{ steps.fetch.outputs.tag }}/" Dockerfile
 
-      - name: Create PR
+      - name: Create or update PR
         if: steps.compare.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "build: Update n8n to ${{ steps.fetch.outputs.tag }}"
           sign-commits: true
-          branch: update-n8n-${{ steps.fetch.outputs.tag }}
+          branch: update-n8n
           title: "build: Update n8n to ${{ steps.fetch.outputs.tag }}"
           body: "Automated update to the latest n8n release."
           labels: auto-update
