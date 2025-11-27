@@ -27,6 +27,10 @@ const CSP_OPTIONS = [
 		name: 'Cloudflare',
 		value: 'cloudflare',
 	},
+	{
+		name: 'Digital Ocean',
+		value: 'digital_ocean',
+	},
 	// TODO IBM is a bit more tricky. There is no JSON file, just the markdown of their documentation:
 	// https://github.com/ibm-cloud-docs/infrastructure-hub/blob/master/ips.md
 	// (we could maybe decouple this into a separate repo that updates daily?)
@@ -108,7 +112,10 @@ type PrefixData = {
 	ipVersion?: 4 | 6;
 	/** Also known as 'scope' */
 	region?: string;
-	service: string;
+	service?: string;
+
+	/** Any other information the CSP provides */
+	meta?: Record<string, string>;
 };
 
 async function getIpRangesForCSP(
@@ -233,6 +240,28 @@ async function getIpRangesForCSP(
 
 		return result;
 	}
+	if (provider === 'digital_ocean') {
+		// https://ideas.digitalocean.com/documentation/p/list-of-digital-ocean-ips-cidrs
+		const data = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: 'https://digitalocean.com/geo/google.csv',
+		})) as string;
+
+		// This is a CSV file with rows formatted as: <ip_prefix>,<country_code>,<subdivision_code>,<city>,<postal_code>
+		const result: PrefixData[] = [];
+		data.split('\n').forEach((rowRaw) => {
+			const [ipPrefix, countryCode, subdivisionCode, city, postalCode] = rowRaw.split(',');
+			result.push({
+				csp: 'cloudflare',
+				ipPrefix: ipPrefix,
+				meta: { countryCode, subdivisionCode, city, postalCode },
+			});
+		});
+
+		return result;
+	}
+
+	provider satisfies never;
 
 	return null;
 }
