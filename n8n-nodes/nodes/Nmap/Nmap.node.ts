@@ -88,7 +88,6 @@ export class Nmap implements INodeType {
 		let res = emptyReturnData();
 		let data = {};
 		if (isWorkflowActive) {
-			// TODO Some options like -sn seems to require sudo rights?
 			res = await execPromiseInTmp(
 				`nmap ${cmdOptions} -oX ${xmlOutputFile} -iL ${targetFile} --excludefile ${excludedTargetsFile}`,
 			);

@@ -4,7 +4,6 @@ ARG N8N_VERSION=1.121.0
 FROM n8nio/n8n:${N8N_VERSION}
 
 # Switch to root to install scanning tools
-# TODO needed?
 USER root
 
 # Note that we cannot pin these package versions, as Alpine might drop old versions
@@ -27,6 +26,5 @@ WORKDIR /
 
 # TODO Investigate if we can make the image smaller (muliti-stage builds)
 
-# Switch back to the default non-root user
+# We cannot switch back to the default non-root user, as some scans like (nmap -sS) requires sudo priviliges
 # Do not change the CMD and ENTRYPOINT from the base image
-USER node
