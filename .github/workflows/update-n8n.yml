@@ -23,14 +23,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Switch to update-n8n branch (create if missing)
-        run: |
-          if git show-ref --verify --quiet refs/heads/update-n8n; then
-            git checkout update-n8n
-          else
-            git checkout -b update-n8n
-          fi
-
       - name: Fetch latest n8n release
         id: fetch
         uses: actions/github-script@v8
