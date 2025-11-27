@@ -27,7 +27,7 @@ export class Zmap implements INodeType {
 		properties: [
 			{
 				displayName:
-					'Use with caution, only use trusted inputs!<br><br>If the workflow is inactive, this node will return fake data.',
+					'Use with caution, only use trusted inputs!<br><br>If the workflow is inactive, this node will not call the scanner.',
 				name: 'notice',
 				type: 'notice',
 				default: '',
@@ -85,8 +85,6 @@ export class Zmap implements INodeType {
 			);
 			const fileData = await fs.readFile(jsonOutputFile, { encoding: 'utf8' });
 			data = fileData.split('\n').map((el) => JSON.parse(el));
-		} else {
-			// TODO return dummy data
 		}
 
 		result.push({
