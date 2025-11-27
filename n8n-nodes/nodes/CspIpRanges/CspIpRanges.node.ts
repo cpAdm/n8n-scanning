@@ -109,13 +109,17 @@ type CloudflareData = {
 type PrefixData = {
 	csp: CSPValue;
 	ipPrefix: string;
-	ipVersion?: 4 | 6;
-	/** Also known as 'scope' */
-	region?: string;
-	service?: string;
 
 	/** Any other information the CSP provides */
-	meta?: Record<string, string>;
+	meta: Partial<{
+		/** Also known as 'scope' */
+		region: string;
+		service: string;
+		countryCode: string;
+		subdivisionCode: string;
+		city: string;
+		postalCode: string;
+	}>;
 };
 
 async function getIpRangesForCSP(
@@ -134,9 +138,7 @@ async function getIpRangesForCSP(
 		return data.prefixes.map((entry) => ({
 			csp: 'GCP',
 			ipPrefix: 'ipv4Prefix' in entry ? entry.ipv4Prefix : entry.ipv6Prefix,
-			ipVersion: 'ipv4Prefix' in entry ? 4 : 6,
-			region: entry.scope,
-			service: entry.service,
+			meta: { region: entry.scope, service: entry.service },
 		}));
 	}
 
@@ -150,17 +152,13 @@ async function getIpRangesForCSP(
 		const ipv4Data: PrefixData[] = data.prefixes.map((entry) => ({
 			csp: 'AWS',
 			ipPrefix: entry.ip_prefix,
-			ipVersion: 4,
-			region: entry.region,
-			service: entry.service,
+			meta: { region: entry.region, service: entry.service },
 		}));
 
 		const ipv6Data: PrefixData[] = data.ipv6_prefixes.map((entry) => ({
 			csp: 'AWS',
 			ipPrefix: entry.ipv6_prefix,
-			ipVersion: 6,
-			region: entry.region,
-			service: entry.service,
+			meta: { region: entry.region, service: entry.service },
 		}));
 
 		return [...ipv4Data, ...ipv6Data];
@@ -197,8 +195,7 @@ async function getIpRangesForCSP(
 				result.push({
 					csp: 'azure',
 					ipPrefix: prefix,
-					region: entry.properties.region,
-					service: entry.name,
+					meta: { region: entry.properties.region, service: entry.name },
 				});
 			}
 		}
@@ -218,23 +215,21 @@ async function getIpRangesForCSP(
 			result.push({
 				csp: 'cloudflare',
 				ipPrefix: prefix,
-				ipVersion: 4,
-				service: 'CLOUDFLARE',
+				meta: { service: 'CLOUDFLARE' },
 			}),
 		);
 		data.result.ipv6_cidrs.forEach((prefix) =>
 			result.push({
 				csp: 'cloudflare',
 				ipPrefix: prefix,
-				ipVersion: 6,
-				service: 'CLOUDFLARE',
+				meta: { service: 'CLOUDFLARE' },
 			}),
 		);
 		data.result.jdcloud_cidrs.forEach((prefix) =>
 			result.push({
 				csp: 'cloudflare',
 				ipPrefix: prefix,
-				service: 'JD_CLOUD',
+				meta: { service: 'JD_CLOUD' },
 			}),
 		);
 
