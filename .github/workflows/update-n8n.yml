@@ -67,6 +67,7 @@ jobs:
         with:
           commit-message: "build: Update n8n to ${{ steps.fetch.outputs.tag }}"
           sign-commits: true
+          # By having a fixed branch here, this action will always update previous PR instead of creating new ones
           branch: update-n8n
           title: "build: Update n8n to ${{ steps.fetch.outputs.tag }}"
           body: "Automated update to the latest n8n release."
