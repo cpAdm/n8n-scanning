@@ -1,4 +1,4 @@
-name: Build n8n-nodes-ip-ranges-csp
+name: Build custom n8n nodes
 
 on:
   pull_request:
