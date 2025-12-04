@@ -14,3 +14,10 @@ export async function writeTempFile(contents: string, suffix: 'txt' | 'json' | '
 
 	return filePath;
 }
+
+export function parsesJSONLines(fileData: string) {
+	return fileData
+		.split('\n')
+		.filter(Boolean) // ignore empty rows
+		.map((el) => JSON.parse(el));
+}
