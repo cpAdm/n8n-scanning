@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@n8n/node-cli": "*",
+    "@types/lodash": "^4.17.21",
     "@types/node": "^24.10.1",
     "@types/xml2js": "^0.4.14",
     "eslint": "^9.32.0",
@@ -47,6 +48,7 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*",
-    "xml2js": "*"
+    "xml2js": "*",
+    "lodash": "*"
   }
 }
