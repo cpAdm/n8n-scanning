@@ -110,7 +110,7 @@ type PrefixData = {
 	csp: CSPValue;
 	ipPrefix: string;
 
-	/** Any other information the CSP provides */
+	/** Any other information the CSP might provide */
 	meta: Partial<{
 		/** Also known as 'scope' */
 		region: string;
