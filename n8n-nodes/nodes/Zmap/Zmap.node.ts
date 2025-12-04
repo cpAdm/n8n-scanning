@@ -5,70 +5,36 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionTypes } from 'n8n-workflow';
 import * as fs from 'node:fs/promises';
 import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
 import { writeTempFile } from '../../utils/file';
+import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 export class Zmap implements INodeType {
 	description: INodeTypeDescription = {
+		...ScannerDescription,
+		usableAsTool: true,
 		displayName: 'ZMap',
 		name: 'zmap',
 		icon: 'file:zmap.svg', // Converted from https://github.com/zmap/graphics/blob/master/zmap1.pdf
-		group: ['transform'],
-		version: 1, // Should be in sync with the node.json file
 		description: 'Perform scans with the network scanner ZMap',
 		defaults: {
 			name: 'ZMap',
 		},
-		inputs: [NodeConnectionTypes.Main],
-		outputs: [NodeConnectionTypes.Main],
-		usableAsTool: true,
 		properties: [
+			ScannerProperties.notice,
 			{
-				displayName:
-					'Use with caution, only use trusted inputs!<br><br>If the workflow is inactive, this node will not call the scanner.',
-				name: 'notice',
-				type: 'notice',
-				default: '',
-			},
-			{
-				displayName: 'Command Options',
-				name: 'cmdOptions',
-				type: 'string',
-				default: '',
+				...ScannerProperties.commandOptions,
 				placeholder: '-p 80',
-				description: 'Additional options to pass to `ZMap`',
+				description: "Additional options to pass to 'ZMap'",
 			},
-			{
-				displayName: 'Target List',
-				required: true,
-				name: 'targets',
-				type: 'multiOptions',
-				allowArbitraryValues: true,
-				validateType: 'array',
-				default: [],
-				description: 'List of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16',
-			},
-			{
-				displayName: 'Excluded Target List',
-				name: 'excludedTargets',
-				type: 'multiOptions',
-				allowArbitraryValues: true,
-				validateType: 'array',
-				default: [],
-				description: 'List of subnets to exclude, in CIDR notation, e.g. 192.168.0.0/16',
-			},
+			ScannerProperties.targetKey,
+			ScannerProperties.excludedTargetKey,
 		],
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const isWorkflowActive = this.getWorkflow().active;
-
-		// TODO verify parameter types
-		const cmdOptions = this.getNodeParameter('cmdOptions', 0, '') as string;
-		const targets = this.getNodeParameter('targets', 0, []) as string[];
-		const excludedTargets = this.getNodeParameter('excludedTargets', 0, []) as string[];
+		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
 
 		// TODO Find suitable data format
 		const result = [];

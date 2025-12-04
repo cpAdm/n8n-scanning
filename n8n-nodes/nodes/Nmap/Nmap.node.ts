@@ -5,11 +5,11 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionTypes } from 'n8n-workflow';
 import * as fs from 'node:fs/promises';
 import { parseStringPromise } from 'xml2js';
 import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
 import { writeTempFile } from '../../utils/file';
+import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 // We leverage 'xml2js' (used by n8n) to convert the XML
 function xmlToJson(xml: string) {
@@ -18,65 +18,29 @@ function xmlToJson(xml: string) {
 
 export class Nmap implements INodeType {
 	description: INodeTypeDescription = {
+		...ScannerDescription,
+		usableAsTool: true,
 		displayName: 'Nmap',
 		name: 'nmap',
 		icon: 'file:nmap.svg', // Copied from https://nmap.org/images/nmap-logo-64px.svg
-		group: ['transform'],
-		version: 1, // Should be in sync with the node.json file
 		description: 'Perform scans with the network scanner Nmap',
 		defaults: {
 			name: 'Nmap',
 		},
-		inputs: [NodeConnectionTypes.Main],
-		outputs: [NodeConnectionTypes.Main],
-		usableAsTool: true,
 		properties: [
+			ScannerProperties.notice,
 			{
-				displayName:
-					'Use with caution, only use trusted inputs!<br><br>If the workflow is inactive, this node will not call the scanner.',
-				name: 'notice',
-				type: 'notice',
-				default: '',
-			},
-			{
-				displayName: 'Command Options',
-				name: 'cmdOptions',
-				type: 'string',
-				default: '',
+				...ScannerProperties.commandOptions,
 				placeholder: '-sn',
-				description: 'Additional options to pass to `Nmap`',
+				description: "Additional options to pass to 'Nmap'",
 			},
-			{
-				displayName: 'Target List',
-				required: true,
-				name: 'targets',
-				type: 'multiOptions',
-				allowArbitraryValues: true,
-				validateType: 'array',
-				default: [],
-				description:
-					'List of hosts to scan.<br><br>Entries can be in any of the formats accepted by Nmap',
-			},
-			{
-				displayName: 'Excluded Target List',
-				name: 'excludedTargets',
-				type: 'multiOptions',
-				allowArbitraryValues: true,
-				validateType: 'array',
-				default: [],
-				description:
-					'List of hosts to be excluded from the scan.<br><br> Entries can be in any of the formats accepted by Nmap',
-			},
+			ScannerProperties.targetKey,
+			ScannerProperties.excludedTargetKey,
 		],
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const isWorkflowActive = this.getWorkflow().active;
-
-		// TODO verify parameter types
-		const cmdOptions = this.getNodeParameter('cmdOptions', 0, '') as string;
-		const targets = this.getNodeParameter('targets', 0, []) as string[];
-		const excludedTargets = this.getNodeParameter('excludedTargets', 0, []) as string[];
+		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
 
 		// TODO Find suitable data format
 		const result = [];
@@ -103,6 +67,11 @@ export class Nmap implements INodeType {
 			data: data,
 		});
 
+		// TODO Should we read the ip ranges from input, and link it the tool output?
+		//  https://docs.n8n.io/integrations/creating-nodes/build/reference/paired-items/
+
+		// TODO use prepareBinaryData instead for better performance?
+		// await this.helpers.prepareBinaryData(Buffer.from(JSON.stringify(result)), 'nmap.json');
 		return [this.helpers.returnJsonArray(result)];
 	}
 }
