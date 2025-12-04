@@ -1,9 +1,10 @@
 import os from 'os';
-import type {
+import {
 	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	NodeOperationError,
 } from 'n8n-workflow';
 import * as fs from 'node:fs/promises';
 import { parseStringPromise } from 'xml2js';
@@ -56,6 +57,11 @@ export class Nmap implements INodeType {
 			res = await execPromiseInTmp(
 				`nmap ${cmdOptions} -oX ${xmlOutputFile} -iL ${targetFile} --excludefile ${excludedTargetsFile}`,
 			);
+			if (res.exitCode !== 0) {
+				throw new NodeOperationError(this.getNode(), `Nmap exited with code ${res.exitCode}`, {
+					description: res.stderr,
+				});
+			}
 			const fileData = await fs.readFile(xmlOutputFile, { encoding: 'utf8' });
 			const xmlData = fileData.replace(/(\r\n|\n|\r)/gm, ''); // TODO find nicer solution
 			data = (await xmlToJson(xmlData)) as object;

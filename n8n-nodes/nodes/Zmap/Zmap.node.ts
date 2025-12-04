@@ -1,9 +1,10 @@
 import os from 'node:os';
-import type {
+import {
 	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	NodeOperationError,
 } from 'n8n-workflow';
 import * as fs from 'node:fs/promises';
 import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
@@ -50,6 +51,11 @@ export class Zmap implements INodeType {
 			res = await execPromiseInTmp(
 				`zmap ${cmdOptions} --output-module=json -o ${jsonOutputFile} --list-of-ips-file ${targetFile} --blocklist-file ${excludedTargetsFile}`,
 			);
+			if (res.exitCode !== 0) {
+				throw new NodeOperationError(this.getNode(), `ZMap exited with code ${res.exitCode}`, {
+					description: res.stderr,
+				});
+			}
 			const fileData = await fs.readFile(jsonOutputFile, { encoding: 'utf8' });
 			data = fileData.split('\n').map((el) => JSON.parse(el));
 		}
