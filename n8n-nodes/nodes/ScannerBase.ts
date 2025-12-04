@@ -3,7 +3,9 @@ import {
 	INodeProperties,
 	INodeTypeDescription,
 	NodeConnectionTypes,
+	NodeOperationError,
 } from 'n8n-workflow';
+import get from 'lodash/get';
 
 export const ScannerDescription = {
 	group: ['transform'],
@@ -64,9 +66,15 @@ export function getParams(functions: IExecuteFunctions) {
 	const targetKey = functions.getNodeParameter('targetKey', 0, []) as string;
 	const excludedTargetKey = functions.getNodeParameter('excludedTargetKey', 0, []) as string;
 
-	const targets = targetInput.map((input) => input.json[targetKey]);
+	const targets = targetInput.map((input) => get(input.json, targetKey)).filter(Boolean);
+	if (targets.length === 0) {
+		throw new NodeOperationError(functions.getNode(), 'No targets found', {
+			description: `Check if Target Key "${targetKey}" is correct. `,
+		});
+	}
+
 	const excludedTargets = excludedTargetKey
-		? excludedTargetInput.map((input) => input.json[targetKey])
+		? excludedTargetInput.map((input) => get(input.json, excludedTargetKey)).filter(Boolean)
 		: [];
 
 	return {

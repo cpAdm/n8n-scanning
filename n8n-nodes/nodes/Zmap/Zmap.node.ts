@@ -10,6 +10,7 @@ import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
 import { writeTempFile } from '../../utils/file';
 import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
+// noinspection JSUnusedGlobalSymbols, refered in package.json
 export class Zmap implements INodeType {
 	description: INodeTypeDescription = {
 		...ScannerDescription,

@@ -261,6 +261,7 @@ async function getIpRangesForCSP(
 	return null;
 }
 
+// noinspection JSUnusedGlobalSymbols, refered in package.json
 export class CspIpRanges implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'IP Ranges: CSPs',

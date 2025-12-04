@@ -16,6 +16,7 @@ function xmlToJson(xml: string) {
 	return parseStringPromise(xml, { mergeAttrs: true, explicitArray: false });
 }
 
+// noinspection JSUnusedGlobalSymbols, refered in package.json
 export class Nmap implements INodeType {
 	description: INodeTypeDescription = {
 		...ScannerDescription,
