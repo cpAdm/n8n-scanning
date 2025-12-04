@@ -44,19 +44,15 @@ export class Nmap implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
 
-		// TODO Find suitable data format
-		const result = [];
-
 		const xmlOutputFile = await writeTempFile('', 'xml');
 		const targetFile = await writeTempFile(targets.join(os.EOL), 'txt');
 		const excludedTargetsFile = await writeTempFile(excludedTargets.join(os.EOL), 'txt');
 
+		const command = `nmap ${cmdOptions} -oX ${xmlOutputFile} -iL ${targetFile} --excludefile ${excludedTargetsFile}`;
 		let res = emptyReturnData();
 		let data = {};
 		if (isWorkflowActive) {
-			res = await execPromiseInTmp(
-				`nmap ${cmdOptions} -oX ${xmlOutputFile} -iL ${targetFile} --excludefile ${excludedTargetsFile}`,
-			);
+			res = await execPromiseInTmp(command);
 			if (res.exitCode !== 0) {
 				throw new NodeOperationError(this.getNode(), `Nmap exited with code ${res.exitCode}`, {
 					description: res.stderr,
@@ -64,21 +60,21 @@ export class Nmap implements INodeType {
 			}
 			const fileData = await fs.readFile(xmlOutputFile, { encoding: 'utf8' });
 			const xmlData = fileData.replace(/(\r\n|\n|\r)/gm, ''); // TODO find nicer solution
+			// TODO Find suitable data format
 			data = (await xmlToJson(xmlData)) as object;
 		}
-
-		result.push({
-			active: isWorkflowActive,
-			output: res,
-			targets: targets,
-			data: data,
-		});
 
 		// TODO Should we read the ip ranges from input, and link it the tool output?
 		//  https://docs.n8n.io/integrations/creating-nodes/build/reference/paired-items/
 
 		// TODO use prepareBinaryData instead for better performance?
 		// await this.helpers.prepareBinaryData(Buffer.from(JSON.stringify(result)), 'nmap.json');
-		return [this.helpers.returnJsonArray(result)];
+		return [
+			this.helpers.returnJsonArray({
+				command: command,
+				stdout: res.stdout,
+			}),
+			this.helpers.returnJsonArray(data),
+		];
 	}
 }

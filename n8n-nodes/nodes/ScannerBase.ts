@@ -13,8 +13,8 @@ export const ScannerDescription = {
 	inputs: [NodeConnectionTypes.Main, NodeConnectionTypes.Main],
 	inputNames: ['Targets', 'Excluded targets'],
 	requiredInputs: [0],
-	// TODO Optionally we can have multiple outputs, e.g. 1 for raw (streamed) cmd output data, other for processed data?
-	outputs: [NodeConnectionTypes.Main],
+	outputs: [NodeConnectionTypes.Main, NodeConnectionTypes.Main],
+	outputNames: ['Raw output', 'Parsed output'],
 } satisfies Partial<INodeTypeDescription>;
 
 export const ScannerProperties = {

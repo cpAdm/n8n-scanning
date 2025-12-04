@@ -38,18 +38,15 @@ export class Zmap implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
 
-		// TODO Find suitable data format
-		const result = [];
-
 		const jsonOutputFile = await writeTempFile('', 'json');
 		const targetFile = await writeTempFile(targets.join(os.EOL), 'txt');
 		const excludedTargetsFile = await writeTempFile(excludedTargets.join(os.EOL), 'txt');
 
+		// TODO Use '--list-of-ips-file' instead of '--allowlist-file' when there are 1M IPs - but that does require IP's not CIDRs!
+		const command = `zmap ${cmdOptions} --output-module=json -o ${jsonOutputFile} --allowlist-file ${targetFile} --blocklist-file ${excludedTargetsFile} --output-filter="success=1 && repeat=0"`;
 		let res = emptyReturnData();
 		let data = [];
 		if (isWorkflowActive) {
-			// TODO Use '--list-of-ips-file' instead of '--allowlist-file' when there are 1M IPs - but that does require IP's not CIDRs!
-			const command = `zmap ${cmdOptions} --output-module=json -o ${jsonOutputFile} --allowlist-file ${targetFile} --blocklist-file ${excludedTargetsFile} --output-filter="success=1 && repeat=0"`;
 			this.sendMessageToUI(command); // Debug via F12
 			res = await execPromiseInTmp(command);
 			if (res.exitCode !== 0) {
@@ -63,13 +60,12 @@ export class Zmap implements INodeType {
 			data = parsesJSONLines(fileData);
 		}
 
-		result.push({
-			active: isWorkflowActive,
-			output: res,
-			targets: targets,
-			data: data,
-		});
-
-		return [this.helpers.returnJsonArray(result)];
+		return [
+			this.helpers.returnJsonArray({
+				command: command,
+				stdout: res.stdout,
+			}),
+			this.helpers.returnJsonArray(data),
+		];
 	}
 }
