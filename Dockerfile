@@ -1,6 +1,15 @@
 # GitHub workflow automatically creates a PR whenever new version is released
 ARG N8N_VERSION=1.121.0
 
+FROM node:24-alpine AS nodes-builder
+
+# Compile our n8n-nodes and add them as well
+COPY /n8n-nodes /tmp/custom-nodes
+WORKDIR /tmp/custom-nodes
+RUN npm ci --include=dev
+RUN npm run build
+
+
 FROM n8nio/n8n:${N8N_VERSION}
 
 # Switch to root to install scanning tools
@@ -14,17 +23,9 @@ RUN apk add --no-cache \
     masscan \
     zmap
 
-# Compile our n8n-nodes and add them as well
-COPY /n8n-nodes /tmp/custom-nodes
-WORKDIR /tmp/custom-nodes
-RUN npm ci --include=dev
-RUN npm run build
-
 ENV N8N_CUSTOM_EXTENSIONS=/data/custom
-RUN mkdir -p /data/custom && cp -r dist/* /data/custom/
-WORKDIR /
-
-# TODO Investigate if we can make the image smaller (muliti-stage builds)
+RUN mkdir -p /data/custom
+COPY --from=nodes-builder /tmp/custom-nodes/dist /data/custom/
 
 # We cannot switch back to the default non-root user, as some scans like (nmap -sS) requires sudo priviliges
 # Do not change the CMD and ENTRYPOINT from the base image
