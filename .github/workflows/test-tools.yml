@@ -13,10 +13,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Build custom Docker image
-        run: docker build -t cpadm:n8n .
+      - name: Create default 'n8n.env' file
+        run: |
+          cp n8n.env.default n8n.env
 
-      - name: Run container in background
+      - name: Build image and run container in background
         run: |
           docker compose -p n8n-scanning up -d --wait
 
