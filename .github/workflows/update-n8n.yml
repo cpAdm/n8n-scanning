@@ -4,9 +4,9 @@ name: Update n8n version
 # Settings -> Actions -> Workflow permissions: "Allow GitHub Actions to create and approve pull requests"
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 6 * * *"   # runs daily at 06:00 UTC
-  workflow_dispatch:      # allow a manual trigger
 
 permissions:
   contents: write

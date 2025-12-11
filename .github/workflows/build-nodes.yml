@@ -1,6 +1,7 @@
 name: Build custom n8n nodes
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [ main ]
