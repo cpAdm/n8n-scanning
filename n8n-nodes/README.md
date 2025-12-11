@@ -1,7 +1,5 @@
 # n8n-nodes-ip-ranges-csp
 
-[//]: # (TODO Add masscan node; let's also refactor into a one? base scan node?)
-
 This is an n8n community node. It lets you retrieve the IP ranges from CSPs in your n8n workflows.
 
 You can retrieve IP ranges for the following CSPs:

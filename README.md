@@ -2,23 +2,20 @@
 
 ## Docker container
 
-Get a working container with N8N and the scanning tools.
+Get a working container with N8N and the scanning tools:
 
-Build container:
+1. Copy `n8n.env.default` to `n8n.env`, adjust variables if needed
+2. Build image and start the container:
+
 ```shell
-docker build -t cpadm:n8n .
+docker compose -p n8n-scanning up -d --build
 ```
 
-Start container:
-```shell
-docker compose -p n8n-scanning up -d
-```
+Stop the container when done:
 
-Stop container
 ```shell
 docker compose down
 ```
-
 
 ## Custom N8N nodes
 
