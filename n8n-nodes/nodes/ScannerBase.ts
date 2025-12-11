@@ -63,8 +63,8 @@ export function getParams(functions: IExecuteFunctions) {
 
 	// TODO verify parameters
 	const cmdOptions = functions.getNodeParameter('cmdOptions', 0, '') as string;
-	const targetKey = functions.getNodeParameter('targetKey', 0, []) as string;
-	const excludedTargetKey = functions.getNodeParameter('excludedTargetKey', 0, []) as string;
+	const targetKey = functions.getNodeParameter('targetKey', 0) as string;
+	const excludedTargetKey = functions.getNodeParameter('excludedTargetKey', 0) as string;
 
 	const targets = targetInput.map((input) => get(input.json, targetKey)).filter(Boolean);
 	if (targets.length === 0) {

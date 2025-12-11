@@ -6,9 +6,8 @@ import {
 	INodeTypeDescription,
 	NodeOperationError,
 } from 'n8n-workflow';
-import * as fs from 'node:fs/promises';
 import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
-import { parsesJSONLines, writeTempFile } from '../../utils/file';
+import { parseJSONLFile, writeTempFile } from '../../utils/file';
 import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
@@ -55,9 +54,8 @@ export class Zmap implements INodeType {
 				});
 			}
 
-			const fileData = await fs.readFile(jsonOutputFile, { encoding: 'utf8' });
 			// Structure based on fields specified via '-f' or '--output-fields' in the cmdOptions
-			data = parsesJSONLines(fileData);
+			data = await parseJSONLFile(jsonOutputFile);
 		}
 
 		return [

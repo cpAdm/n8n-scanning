@@ -6,16 +6,9 @@ import {
 	INodeTypeDescription,
 	NodeOperationError,
 } from 'n8n-workflow';
-import * as fs from 'node:fs/promises';
-import { parseStringPromise } from 'xml2js';
 import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
-import { writeTempFile } from '../../utils/file';
+import { parseXMLFile, writeTempFile } from '../../utils/file';
 import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
-
-// We leverage 'xml2js' (used by n8n) to convert the XML
-function xmlToJson(xml: string) {
-	return parseStringPromise(xml, { mergeAttrs: true, explicitArray: false });
-}
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
 export class Nmap implements INodeType {
@@ -58,10 +51,8 @@ export class Nmap implements INodeType {
 					description: res.stderr,
 				});
 			}
-			const fileData = await fs.readFile(xmlOutputFile, { encoding: 'utf8' });
-			const xmlData = fileData.replace(/(\r\n|\n|\r)/gm, ''); // TODO find nicer solution
 			// TODO Find suitable data format
-			data = (await xmlToJson(xmlData)) as object;
+			data = parseXMLFile(xmlOutputFile);
 		}
 
 		// TODO Should we read the ip ranges from input, and link it the tool output?

@@ -105,7 +105,6 @@ type CloudflareData = {
 	messages: unknown;
 };
 
-// TODO Check if this is a good data format
 type PrefixData = {
 	csp: CSPValue;
 	ipPrefix: string;
