@@ -32,6 +32,7 @@
     "credentials": [],
     "nodes": [
       "dist/nodes/CspIpRanges/CspIpRanges.node.js",
+      "dist/nodes/Masscan/Masscan.node.js",
       "dist/nodes/Nmap/Nmap.node.js",
       "dist/nodes/Zmap/Zmap.node.js"
     ]

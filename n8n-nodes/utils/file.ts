@@ -16,6 +16,11 @@ export async function writeTempFile(contents: string, suffix: 'txt' | 'json' | '
 	return filePath;
 }
 
+export async function parseJSONFile(filePath: string) {
+	const fileData = await fs.readFile(filePath, { encoding: 'utf8' });
+	return JSON.parse(fileData);
+}
+
 export async function parseJSONLFile(filePath: string) {
 	const fileData = await fs.readFile(filePath, { encoding: 'utf8' });
 	return fileData

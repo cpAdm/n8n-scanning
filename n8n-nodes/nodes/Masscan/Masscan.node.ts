@@ -7,27 +7,27 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
-import { parseJSONLFile, writeTempFile } from '../../utils/file';
+import { parseJSONFile, writeTempFile } from '../../utils/file';
 import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
-export class Zmap implements INodeType {
+export class Masscan implements INodeType {
 	description: INodeTypeDescription = {
 		...ScannerDescription,
 		usableAsTool: true,
-		displayName: 'ZMap',
-		name: 'zmap',
-		icon: 'file:zmap.svg', // Converted from https://github.com/zmap/graphics/blob/master/zmap1.pdf
-		description: 'Perform scans with the network scanner ZMap',
+		displayName: 'MASSCAN',
+		name: 'masscan',
+		icon: 'file:masscan.svg', // Copied from https://www.kali.org/tools/masscan/images/masscan-logo.svg
+		description: 'Perform scans with the network scanner MASSCAN',
 		defaults: {
-			name: 'ZMap',
+			name: 'MASSCAN',
 		},
 		properties: [
 			ScannerProperties.notice,
 			{
 				...ScannerProperties.commandOptions,
 				placeholder: '-p 80',
-				description: "Additional options to pass to 'ZMap'",
+				description: "Additional options to pass to 'MASSCAN'",
 			},
 			ScannerProperties.targetKey,
 			ScannerProperties.excludedTargetKey,
@@ -41,20 +41,18 @@ export class Zmap implements INodeType {
 		const targetFile = await writeTempFile(targets.join(os.EOL), 'txt');
 		const excludedTargetsFile = await writeTempFile(excludedTargets.join(os.EOL), 'txt');
 
-		// TODO Use '--list-of-ips-file' instead of '--allowlist-file' when there are 1M IPs - but that does require IP's not CIDRs!
-		const command = `zmap ${cmdOptions} --output-module=json -o ${jsonOutputFile} --allowlist-file ${targetFile} --blocklist-file ${excludedTargetsFile} --output-filter="success=1 && repeat=0"`;
+		const command = `masscan ${cmdOptions} -oJ ${jsonOutputFile} --includefile ${targetFile} --excludefile ${excludedTargetsFile}`;
 		let res = emptyReturnData();
 		let data = [];
 		if (isWorkflowActive) {
 			res = await execPromiseInTmp(command);
 			if (res.exitCode !== 0) {
-				throw new NodeOperationError(this.getNode(), `ZMap exited with code ${res.exitCode}`, {
+				throw new NodeOperationError(this.getNode(), `masscan exited with code ${res.exitCode}`, {
 					description: res.stderr,
 				});
 			}
 
-			// Structure based on fields specified via '-f' or '--output-fields' in the cmdOptions
-			data = await parseJSONLFile(jsonOutputFile);
+			data = await parseJSONFile(jsonOutputFile);
 		}
 
 		return [

@@ -20,7 +20,7 @@ USER root
 # https://pkgs.alpinelinux.org/packages
 RUN apk add --no-cache \
     nmap \
-    masscan \
+    masscan libpcap libpcap-dev \
     zmap
 
 ENV N8N_CUSTOM_EXTENSIONS=/data/custom
