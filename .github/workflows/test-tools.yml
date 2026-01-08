@@ -22,6 +22,12 @@ jobs:
         run: |
           docker compose -p n8n-scanning up -d --wait
 
+      - name: Check if all tool dependencies are met
+        run: |
+          docker exec n8n-scanning-n8n-1 sh -c "ldd /usr/bin/nmap"
+          docker exec n8n-scanning-n8n-1 sh -c "ldd /usr/bin/masscan"
+          docker exec n8n-scanning-n8n-1 sh -c "ldd /usr/sbin/zmap"
+
       - name: Check if all tools are available inside the container
         run: |
           docker exec n8n-scanning-n8n-1 sh -c "nmap --version"
