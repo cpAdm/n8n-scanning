@@ -39,10 +39,11 @@ jobs:
         timeout-minutes: 1
         run: |
           echo "Upload and trigger workflow with Nmap for scanme.nmap.org"
-          curl -X POST http://localhost:5678/api/v1/workflows \
+          # TODO Pass auth?
+          curl -X POST http://0.0.0.0:5678/api/v1/workflows \
                -H "Content-Type: application/json" \
                -d @tests/workflows/Nmap.json
-          curl -s -X POST http://localhost:5678/webhook/4fbcd73c-c822-4be7-b984-03ea4cf5ef44
-#          TODO Make assertions on output
+          curl -s -X POST http://0.0.0.0:5678/webhook/4fbcd73c-c822-4be7-b984-03ea4cf5ef44
+          # TODO Make assertions on output
 
 # TODO Publish container
