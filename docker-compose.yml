@@ -9,6 +9,7 @@ services:
     ports:
       - "5678:5678"
 
+    # Required by at least ZMAP
     cap_add:
       - NET_RAW
       - NET_ADMIN
@@ -16,7 +17,7 @@ services:
     env_file: "n8n.env"
 
     volumes:
-      - n8n_data:/home/node/.n8n
+      - n8n_data:/home/root/.n8n
 
 
 volumes:
