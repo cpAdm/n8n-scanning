@@ -52,7 +52,7 @@ export class Nmap implements INodeType {
 				});
 			}
 			// TODO Find suitable data format
-			data = parseXMLFile(xmlOutputFile);
+			data = await parseXMLFile(xmlOutputFile);
 		}
 
 		// TODO Should we read the ip ranges from input, and link it the tool output?
