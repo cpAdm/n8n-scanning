@@ -41,6 +41,7 @@ jobs:
           echo "Upload and trigger workflow with Nmap for scanme.nmap.org"
           # TODO Pass auth?
           docker exec n8n-scanning-n8n-1 sh -c '
+            apk add curl
             curl -X POST http://localhost:5678/api/v1/workflows \
                  -H "Content-Type: application/json" \
                  -d @tests/workflows/Nmap.json
