@@ -35,10 +35,14 @@ jobs:
           docker exec n8n-scanning-n8n-1 sh -c "masscan --version" || true
           docker exec n8n-scanning-n8n-1 sh -c "zmap --version"
 
-# TODO Also test with n8n workflow (in combination with our custom nodes)
-#      - name: (Optional) Run an n8n workflow
-#        run: |
-#          echo "Triggering internal n8n workflow via API (if configured)..."
-#          curl -s -X POST http://localhost:5678/webhook-test
+      - name: Run n8n workflow with custom nodes
+        timeout-minutes: 1
+        run: |
+          echo "Upload and trigger workflow with Nmap for scanme.nmap.org"
+          curl -X POST http://localhost:5678/api/v1/workflows \
+               -H "Content-Type: application/json" \
+               -d @tests/workflows/Nmap.json
+          curl -s -X POST http://localhost:5678/webhook/4fbcd73c-c822-4be7-b984-03ea4cf5ef44
+#          TODO Make assertions on output
 
 # TODO Publish container
