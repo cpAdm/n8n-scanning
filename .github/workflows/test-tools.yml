@@ -41,7 +41,8 @@ jobs:
           echo "Upload and trigger workflow with Nmap for scanme.nmap.org"
           # TODO Pass auth?
           nc -zv localhost 5678
-          curl -v http://localhost:5678/api/v1/docs
+          curl -v http://localhost:5678/healthz
+          curl -v http://localhost:5678/api/v1/docs/
           curl -v http://localhost:5678/api/v1/workflows
           curl -X POST http:/localhost:5678/api/v1/workflows \
                -H "Content-Type: application/json" \
