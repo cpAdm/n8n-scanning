@@ -26,6 +26,15 @@ FROM n8nio/n8n:${N8N_VERSION}
 # We need root access for some scanning tools
 USER root
 
+# TODO instead, try to re-install apk-tools
+# wget https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/$(uname -m)/apk-tools-static-*.apk
+# tar -xzf apk-tools-static-*.apk
+# cp sbin/apk.static /sbin/apk
+# chmod +x /sbin/apk
+# /sbin/apk version
+# apk add --no-cache apk-tools
+# rm -rf apk-tools-static-*.apk sbin
+
 # We need to copy all scanning tools and its dependencies
 COPY --from=tools /usr/bin/nmap /usr/bin/
 COPY --from=tools /usr/bin/masscan /usr/bin/

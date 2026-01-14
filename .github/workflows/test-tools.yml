@@ -35,22 +35,7 @@ jobs:
           docker exec n8n-scanning-n8n-1 sh -c "masscan --version" || true
           docker exec n8n-scanning-n8n-1 sh -c "zmap --version"
 
-      - name: Run n8n workflow with custom nodes
-        timeout-minutes: 1
-        run: |
-          echo "Upload and trigger workflow with Nmap for scanme.nmap.org"
-          # TODO Pass auth?
-          until curl -s http://localhost:5678/healthz; do
-            echo "Waiting for n8n..."
-            sleep 2
-          done
-          echo "n8n ready"
-          curl -v http://localhost:5678/api/v1/docs/
-          curl -v http://localhost:5678/api/v1/workflows
-          curl -X POST http://localhost:5678/api/v1/workflows \
-               -H "Content-Type: application/json" \
-               -d @tests/workflows/Nmap.json
-          curl -s -X POST http://localhost:5678/webhook/4fbcd73c-c822-4be7-b984-03ea4cf5ef44
-          # TODO Make assertions on output
+
+# TODO Run /tests here, but somehow we need to generate an API key?
 
 # TODO Publish container
