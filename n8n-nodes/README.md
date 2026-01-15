@@ -3,8 +3,8 @@
 This is an n8n community node. It lets you retrieve the IP ranges from CSPs in your n8n workflows.
 
 You can retrieve IP ranges for the following CSPs:
-- ...
 
+- ...
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
@@ -35,8 +35,8 @@ _By the time users are looking for community nodes, they probably already know n
 
 ## Resources
 
-* [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
-* _Link to app/service documentation._
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
+- _Link to app/service documentation._
 
 ## Version history
 
