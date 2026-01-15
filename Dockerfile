@@ -39,7 +39,8 @@ RUN rm -rf apk-tools-static-*.apk sbin
 RUN apk add --no-cache \
     nmap \
     masscan libpcap libpcap-dev \
-    zmap
+    zmap \
+    tcpdump
 
 ENV N8N_CUSTOM_EXTENSIONS=/data/custom
 RUN mkdir -p /data/custom
