@@ -1,5 +1,6 @@
 services:
   #  TODO add 'web' service for serving contact page
+  #  TODO Enable python task runner in external mode https://docs.n8n.io/hosting/configuration/task-runners/#setting-up-external-mode
 
   # See: https://docs.n8n.io/hosting/installation/server-setups/docker-compose/#6-create-docker-compose-file
   n8n:
