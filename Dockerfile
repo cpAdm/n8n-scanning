@@ -1,5 +1,5 @@
 # GitHub workflow automatically creates a PR whenever new version is released
-ARG N8N_VERSION=2.2.4
+ARG N8N_VERSION=2.4.4
 
 FROM node:24-alpine AS nodes-builder
 
@@ -18,7 +18,7 @@ USER root
 # Re-install package manager (n8n image has apk-tools removed)
 # https://github.com/n8n-io/n8n/blob/bc7ec87a5bbb995d777a9e1eb2290796d59c1b5e/docker/images/n8n-base/Dockerfile#L29C2-L29C22
 RUN set -eux; \
-    ALPINE_VER="v$(cut -d. -f1,2 /etc/alpine-release)"; \
+    ALPINE_VER="v$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2)"; \
     ARCH="$(uname -m)"; \
     BASE_URL="https://dl-cdn.alpinelinux.org/alpine/$ALPINE_VER/main/$ARCH"; \
     wget "$BASE_URL/APKINDEX.tar.gz"; \
