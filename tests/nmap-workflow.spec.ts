@@ -34,12 +34,9 @@ test(
 
         console.log('Webhook triggered:', JSON.stringify(result, null, 2));
         assert.match(
-            result.command,
+            result?.nmaprun?.args,
             /^nmap -p 80 -oX \/tmp\/[a-f0-9]+xml -iL \/tmp\/[a-f0-9]+txt --excludefile \/tmp\/[a-f0-9]+txt$/
         );
-        assert.match(
-            result.stdout,
-            /^Starting Nmap 7\.97 \( https:\/\/nmap\.org \) at .*?\nNmap scan report for scanme\.nmap\.org \(45\.33\.32\.156\)\nHost is up \([0-9.]+s latency\)\.\nOther addresses for scanme\.nmap\.org \(not scanned\): .*?\n\nPORT\s+STATE\s+SERVICE\n80\/tcp\s+open\s+http\n\nNmap done: 1 IP address \(1 host up\) scanned in [0-9.]+ seconds$/
-        );
+        assert.equal(result?.nmaprun?.runstats?.hosts.total, "1");
     }
 );

@@ -61,11 +61,11 @@ export class Nmap implements INodeType {
 		// TODO use prepareBinaryData instead for better performance?
 		// await this.helpers.prepareBinaryData(Buffer.from(JSON.stringify(result)), 'nmap.json');
 		return [
+			this.helpers.returnJsonArray(data),
 			this.helpers.returnJsonArray({
 				command: command,
 				stdout: res.stdout,
 			}),
-			this.helpers.returnJsonArray(data),
 		];
 	}
 }

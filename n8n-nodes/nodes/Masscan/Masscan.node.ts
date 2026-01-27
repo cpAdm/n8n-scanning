@@ -56,11 +56,11 @@ export class Masscan implements INodeType {
 		}
 
 		return [
+			this.helpers.returnJsonArray(data),
 			this.helpers.returnJsonArray({
 				command: command,
 				stdout: res.stdout,
 			}),
-			this.helpers.returnJsonArray(data),
 		];
 	}
 }
