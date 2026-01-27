@@ -9,6 +9,8 @@ WORKDIR /tmp/custom-nodes
 RUN npm ci --include=dev
 RUN npm run build
 
+# Their is no alpine package for zgrab2, so instead copy it from their image
+FROM ghcr.io/zmap/zgrab2 AS zgrab2-builder
 
 FROM n8nio/n8n:${N8N_VERSION}
 
@@ -41,6 +43,10 @@ RUN apk add --no-cache \
     masscan libpcap libpcap-dev \
     zmap \
     tcpdump
+
+# See https://github.com/zmap/zgrab2/blob/master/Dockerfile what to copy
+COPY --from=zgrab2-builder /usr/bin/zgrab2 /usr/local/bin/zgrab2
+COPY --from=zgrab2-builder /root/.config/zgrab2 /root/.config/zgrab2
 
 ENV N8N_CUSTOM_EXTENSIONS=/data/custom
 RUN mkdir -p /data/custom

@@ -24,6 +24,6 @@ docker compose down
 ## Custom N8N nodes
 
 See `./nodes` for all available custom (action) nodes. This includes one for retrieving IP ranges from CSPs and for the
-popular scanning tools NMap, ZMap, and MASSCAN.
+popular scanning tools NMap, ZMap, Zgrab2, and MASSCAN.
 
 When you make changes, build and start the container again with the aforementioned command.

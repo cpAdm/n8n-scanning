@@ -28,6 +28,7 @@ jobs:
           # MASSCAN always exits with code 1 here, suppress it
           docker exec n8n-scanning-n8n-1 sh -c "masscan --version" || true
           docker exec n8n-scanning-n8n-1 sh -c "zmap --version"
+          docker exec n8n-scanning-n8n-1 sh -c "zgrab2 --version"
 
 
 # TODO Run /tests here, but somehow we need to generate an API key?

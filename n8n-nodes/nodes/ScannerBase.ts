@@ -7,6 +7,8 @@ import {
 } from 'n8n-workflow';
 import get from 'lodash/get';
 
+// TODO Add scanner node for ZGrab2
+
 export const ScannerDescription = {
 	group: ['transform'],
 	version: 1, // Should be in sync with the node.json file
