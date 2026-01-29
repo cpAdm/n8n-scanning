@@ -121,6 +121,33 @@ type PrefixData = {
 	}>;
 };
 
+type PrefixDataWithCount = PrefixData & {
+	ipsInPrefix: number;
+};
+
+function countIPsInPrefix(prefix: string): number {
+	const parts = prefix.split('/');
+	if (parts.length !== 2) return 0;
+
+	const ip = parts[0];
+	const mask = Number(parts[1]);
+	if (!Number.isInteger(mask)) return 0;
+
+	// IPv4
+	if (ip.includes('.')) {
+		if (mask < 0 || mask > 32) return 0;
+		return 2 ** (32 - mask);
+	}
+
+	// IPv6
+	if (ip.includes(':')) {
+		if (mask < 0 || mask > 128) return 0;
+		return 2 ** (128 - mask);
+	}
+
+	return 0;
+}
+
 async function getIpRangesForCSP(
 	functions: IExecuteFunctions,
 	provider: CSPValue,
@@ -288,7 +315,7 @@ export class CspIpRanges implements INodeType {
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const providers = this.getNodeParameter('CSPs', 0) as string[];
-		const result: PrefixData[] = [];
+		const result: PrefixDataWithCount[] = [];
 
 		for (const provider of providers) {
 			const data = await getIpRangesForCSP(this, provider as CSPValue);
@@ -297,8 +324,12 @@ export class CspIpRanges implements INodeType {
 					description: `Found unsupported CSP: '${provider}'`,
 				});
 			}
+			const prefixData = data.map((value) => ({
+				...value,
+				ipsInPrefix: countIPsInPrefix(value.ipPrefix),
+			}));
 
-			result.push(...data);
+			result.push(...prefixData);
 		}
 
 		return [this.helpers.returnJsonArray(result)];
