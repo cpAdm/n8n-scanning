@@ -14,9 +14,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Create default 'n8n.env' file
+      - name: Create default '.env' file
         run: |
-          cp n8n.env.default n8n.env
+          cp .env.default .env
 
       - name: Build image and run container in background
         run: |

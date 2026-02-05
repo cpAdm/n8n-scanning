@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="189196fb-920f-46f7-8d4c-051444b95842" name="dacs" url="http://localhost">
+        <fileTransfer rootFolder="/home/cpadm" accessType="SFTP" host="192.87.173.72" port="22" sshConfigId="518e01f9-d9b4-4fa0-bd04-f5fd3ed891dd" sshConfig="cpadm@192.87.173.72:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

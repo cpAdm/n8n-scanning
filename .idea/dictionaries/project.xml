@@ -4,6 +4,7 @@
       <w>buildx</w>
       <w>masscan</w>
       <w>promisifiy</w>
+      <w>traefik</w>
       <w>xml2js</w>
     </words>
   </dictionary>

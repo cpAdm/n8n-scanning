@@ -1,25 +1,113 @@
+# See: https://docs.n8n.io/hosting/installation/server-setups/docker-compose/#6-create-docker-compose-file
+
 services:
-  #  TODO add 'web' service for serving contact page
-  #  TODO Enable python task runner in external mode https://docs.n8n.io/hosting/configuration/task-runners/#setting-up-external-mode
+    #  TODO Enable python task runner in external mode https://docs.n8n.io/hosting/configuration/task-runners/#setting-up-external-mode
 
-  # See: https://docs.n8n.io/hosting/installation/server-setups/docker-compose/#6-create-docker-compose-file
-  n8n:
-    build: .
-    image: cpadm:n8n
-    restart: unless-stopped
-    ports:
-      - "5678:5678"
+    # See: https://doc.traefik.io/traefik/v3.0/user-guides/docker-compose/acme-tls/
+    traefik:
+        image: traefik:v3
+        restart: unless-stopped
+        command:
+            - "--providers.docker=true"
+            - "--providers.docker.exposedbydefault=false"
 
-    # Required by at least ZMAP
-    cap_add:
-      - NET_RAW
-      - NET_ADMIN
+            - "--entrypoints.web.address=:80"
+            - "--entrypoints.websecure.address=:443"
 
-    env_file: "n8n.env"
+            # Let's Encrypt (tries to connect to port 443)
+            - "--certificatesresolvers.le.acme.tlschallenge=true"
+            - "--certificatesresolvers.le.acme.email=${SSL_EMAIL}"
+            - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
 
-    volumes:
-      - n8n_data:/home/root/.n8n
+        ports:
+            - "80:80"
+            - "443:443"
+
+        volumes:
+            - traefik_data:/letsencrypt
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    # Note that we always need some web service running in order for the LTS challenge to work
+    # TODO Put actual HTML into this webservice
+    web:
+        image: nginx:alpine
+        restart: unless-stopped
+
+        labels:
+            - "traefik.enable=true"
+
+            # Router for HTTP → HTTPS redirection
+            - "traefik.http.routers.web-http.rule=Host(`${DOMAIN_NAME}`)"
+            - "traefik.http.routers.web-http.entrypoints=web"
+            - "traefik.http.routers.web-http.middlewares=redirect-to-https"
+            - "traefik.http.routers.web-http.priority=1"
+            - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+            # Router for HTTPS
+            - "traefik.http.routers.web.rule=Host(`${DOMAIN_NAME}`)"
+            - "traefik.http.routers.web.entrypoints=websecure"
+            - "traefik.http.routers.web.tls=true"
+            - "traefik.http.routers.web.tls.certresolver=le"
+
+            - "traefik.http.services.web.loadbalancer.server.port=80"
+
+        volumes:
+            - ./web:/usr/share/nginx/html:ro
+
+    n8n:
+        build: .
+        image: cpadm:n8n
+        restart: unless-stopped
+
+        # Required by at least ZMAP
+        cap_add:
+            - NET_RAW
+            - NET_ADMIN
+
+        environment:
+            - N8N_PROTOCOL=https
+            - N8N_HOST=${DOMAIN_NAME}
+            - N8N_PORT=5678
+            - N8N_PATH=/n8n/
+            # We run as root, not as 'node' user
+            - N8N_USER_FOLDER=/home/root
+            - NODE_ENV=production
+
+        labels:
+            - "traefik.enable=true"
+
+            # Router for HTTP → HTTPS redirection
+            - "traefik.http.routers.n8n-http.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/n8n`)"
+            - "traefik.http.routers.n8n-http.entrypoints=web"
+            - "traefik.http.routers.n8n-http.middlewares=redirect-to-https"
+            - "traefik.http.routers.n8n-http.priority=2"
+            - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+            # Router for HTTPS with path-based routing
+            - "traefik.http.routers.n8n.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/n8n`)"
+            - "traefik.http.routers.n8n.entrypoints=websecure"
+            - "traefik.http.routers.n8n.tls=true"
+            - "traefik.http.routers.n8n.tls.certresolver=le"
+
+            # n8n listens internally on 5678
+            - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+            # Security headers
+            - "traefik.http.middlewares.n8n-headers.headers.STSSeconds=31536000"
+            - "traefik.http.middlewares.n8n-headers.headers.forceSTSHeader=true"
+            - "traefik.http.middlewares.n8n-headers.headers.STSIncludeSubdomains=true"
+            - "traefik.http.middlewares.n8n-headers.headers.browserXSSFilter=true"
+            - "traefik.http.middlewares.n8n-headers.headers.contentTypeNosniff=true"
+
+            - "traefik.http.middlewares.n8n-strip.stripPrefix.prefixes=/n8n"
+
+            # Attach all middlewares
+            - "traefik.http.routers.n8n.middlewares=n8n-strip@docker,n8n-headers@docker"
+
+        volumes:
+            - n8n_data:/home/root/.n8n
 
 
 volumes:
-  n8n_data:
+    traefik_data:
+    n8n_data:
