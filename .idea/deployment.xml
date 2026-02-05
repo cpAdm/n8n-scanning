@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="dacs" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="dacs">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/scanning-container" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/n8n-nodes/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/tests/node_modules" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>
