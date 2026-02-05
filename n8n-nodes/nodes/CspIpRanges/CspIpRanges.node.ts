@@ -123,24 +123,30 @@ type PrefixData = {
 
 type PrefixDataWithCount = PrefixData & {
 	ipsInPrefix: number;
+	ipVersion: 4 | 6;
 };
+
+function getVersionFromPrefix(prefix: string) {
+	if (prefix.includes(':')) {
+		return 6;
+	}
+	return 4;
+}
 
 function countIPsInPrefix(prefix: string): number {
 	const parts = prefix.split('/');
 	if (parts.length !== 2) return 0;
 
-	const ip = parts[0];
 	const mask = Number(parts[1]);
 	if (!Number.isInteger(mask)) return 0;
 
-	// IPv4
-	if (ip.includes('.')) {
+	const ipVersion = getVersionFromPrefix(prefix);
+	if (ipVersion === 4) {
 		if (mask < 0 || mask > 32) return 0;
 		return 2 ** (32 - mask);
 	}
 
-	// IPv6
-	if (ip.includes(':')) {
+	if (ipVersion === 6) {
 		if (mask < 0 || mask > 128) return 0;
 		return 2 ** (128 - mask);
 	}
@@ -324,10 +330,16 @@ export class CspIpRanges implements INodeType {
 					description: `Found unsupported CSP: '${provider}'`,
 				});
 			}
-			const prefixData = data.map((value) => ({
-				...value,
-				ipsInPrefix: countIPsInPrefix(value.ipPrefix),
-			}));
+
+			// Note that summation of prefixes is not necessarily actual total - there might be overlapping prefixes
+			const prefixData = data.map(
+				(value) =>
+					({
+						...value,
+						ipsInPrefix: countIPsInPrefix(value.ipPrefix),
+						ipVersion: getVersionFromPrefix(value.ipPrefix),
+					}) as const,
+			);
 
 			result.push(...prefixData);
 		}
