@@ -32,5 +32,5 @@ jobs:
 
 
 # TODO Run /tests here, but somehow we need to generate an API key?
+# TODO Verify the web part is successfully deployed (copy to web folder)
 
-# TODO Publish container
