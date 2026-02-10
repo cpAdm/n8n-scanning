@@ -27,8 +27,7 @@ services:
             - traefik_data:/letsencrypt
             - /var/run/docker.sock:/var/run/docker.sock:ro
 
-    # Note that we always need some web service running in order for the LTS challenge to work
-    # TODO Put actual HTML into this webservice
+    # Note that we always need some web service running in order for the TLS challenge to work
     web:
         image: nginx:alpine
         restart: unless-stopped
