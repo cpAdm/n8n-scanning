@@ -61,6 +61,14 @@ sudo nft list ruleset
 
 [//]: # (TODO Add more usage examples on how to get started, include workflow templates, etc.)
 
+[//]: # ( The workflow needs to be published, else scan is skipped, so e.g. use the schedule trigger)
+
+### Blocklist
+
+To responsible scan, allow users to opt out via your contact page. See `data/blocklist.txt` for a list of IP's (with
+optionally port number) that already
+have [requested in the past](https://gitlab.utwente.nl/m7711402/internet-wide-scans) to opt out.
+
 ### Custom n8n nodes
 
 See `./nodes` for all available custom (action) nodes. This includes one for retrieving IP ranges from CSPs and for the
