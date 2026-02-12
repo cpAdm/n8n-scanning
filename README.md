@@ -6,7 +6,7 @@
 
 ## Getting started
 
-Get a working container with n8n and the scanning tools:
+Get a working container with n8n, the scanning tools, and the contact page:
 
 1. Install the following tools:
     - [Docker Engine](https://docs.docker.com/engine/install/)
@@ -42,16 +42,16 @@ docker compose down
 docker stop n8n-scanning-traefik-1 n8n-scanning-n8n-1 n8n-scanning-web-1
 ```
 
-### VM Firewall
+### Firewall
 
-You might run into firewall issues in order to expose ports 80 and 443. Below is an example for firewall rules to allow
-n8n in docker to be accessed from the outside (a reboot might be needed):
+You might run into (VM) firewall issues in order to expose ports 80 and 443. Below is an example for firewall rules to
+allow n8n in docker to be accessed from the outside (a reboot might be needed):
 
 ```bash
 sudo cp nftables.conf /etc/nftables.conf && sudo nft -f /etc/nftables/conf && sudo systemctl enable --now nftables
 ```
 
-See firewall config:
+See the new firewall config:
 
 ```bash
 sudo nft list ruleset
@@ -75,3 +75,9 @@ See `./nodes` for all available custom (action) nodes. This includes one for ret
 popular scanning tools NMap, ZMap, Zgrab2, and MASSCAN.
 
 When you make changes, build and start the container again with the aforementioned command.
+
+# Resources
+
+- [Contribution guide](CONTRIBUTING.md)
+- [n8n docs](https://docs.n8n.io/)
+ 
