@@ -30,7 +30,12 @@ jobs:
           docker exec n8n-scanning-n8n-1 sh -c "zmap --version"
           docker exec n8n-scanning-n8n-1 sh -c "zgrab2 --help"
 
+      - name: Verify contact page is up
+        run: curl -fsS https://localhost | grep -qi "contact page"
+
+      - name: Verify n8n website is up
+        run: curl -fsS https://localhost/n8n | grep -qi "n8n.io - Workflow Automation"
+
 
 # TODO Run /tests here, but somehow we need to generate an API key?
-# TODO Verify the web part is successfully deployed (copy to web folder)
 
