@@ -32,11 +32,11 @@ jobs:
 
       - name: Verify contact page is up
         run: |
-          curl -kfsS -H "Host: localhost" https://localhost | grep -qi "contact page"
+          curl -kfsS -H "Host: example.com" https://localhost | grep -qi "contact page"
 
       - name: Verify n8n website is up
         run: |
-          curl -kfsS -H "Host: localhost" https://localhost/n8n | grep -qi "n8n.io - Workflow Automation"
+          curl -kfsS -H "Host: example.com" https://localhost/n8n | grep -qi "n8n.io - Workflow Automation"
 
 
 # TODO Run /tests here, but somehow we need to generate an API key?
