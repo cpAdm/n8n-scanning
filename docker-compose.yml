@@ -71,6 +71,8 @@ services:
             # We run as root, not as 'node' user
             - N8N_USER_FOLDER=/home/root
             - NODE_ENV=production
+            # Allow to read and write from our volume
+            - N8N_RESTRICT_FILE_ACCESS_TO="/files"
 
         labels:
             - "traefik.enable=true"
@@ -105,6 +107,7 @@ services:
 
         volumes:
             - n8n_data:/home/root/.n8n
+            - ./data:/files
 
 
 volumes:
