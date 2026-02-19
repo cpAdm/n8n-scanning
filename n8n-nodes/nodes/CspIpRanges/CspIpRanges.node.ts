@@ -1,6 +1,5 @@
 import {
 	IExecuteFunctions,
-	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
 	NodeConnectionTypes,
@@ -319,7 +318,7 @@ export class CspIpRanges implements INodeType {
 		],
 	};
 
-	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+	async execute(this: IExecuteFunctions) {
 		const providers = this.getNodeParameter('CSPs', 0) as string[];
 		const result: PrefixDataWithCount[] = [];
 

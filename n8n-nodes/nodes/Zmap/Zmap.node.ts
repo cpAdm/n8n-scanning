@@ -1,7 +1,6 @@
 import os from 'node:os';
 import {
 	IExecuteFunctions,
-	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
@@ -34,7 +33,7 @@ export class Zmap implements INodeType {
 		],
 	};
 
-	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+	async execute(this: IExecuteFunctions) {
 		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
 
 		const jsonOutputFile = await writeTempFile('', 'json');

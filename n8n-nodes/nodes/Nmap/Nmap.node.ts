@@ -1,7 +1,6 @@
 import os from 'os';
 import {
 	IExecuteFunctions,
-	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
@@ -34,7 +33,7 @@ export class Nmap implements INodeType {
 		],
 	};
 
-	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+	async execute(this: IExecuteFunctions) {
 		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
 
 		const xmlOutputFile = await writeTempFile('', 'xml');
@@ -59,6 +58,7 @@ export class Nmap implements INodeType {
 		//  https://docs.n8n.io/integrations/creating-nodes/build/reference/paired-items/
 
 		// TODO use prepareBinaryData instead for better performance?
+		// See read/write n8n node for example on how to work with binary data
 		// await this.helpers.prepareBinaryData(Buffer.from(JSON.stringify(result)), 'nmap.json');
 		return [
 			this.helpers.returnJsonArray(data),
