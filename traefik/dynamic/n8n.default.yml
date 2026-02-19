@@ -1,0 +1,31 @@
+http:
+    routers:
+        n8n:
+            rule: "Host(`DOMAIN_NAME`) && PathPrefix(`/n8n`)"
+            entryPoints:
+                - websecure
+            tls:
+                certResolver: le
+            service: n8n
+            middlewares:
+                - n8n-strip
+                - n8n-headers
+
+    services:
+        n8n:
+            loadBalancer:
+                servers:
+                    -   url: "http://DOMAIN_IP:5678"
+
+    middlewares:
+        n8n-strip:
+            stripPrefix:
+                prefixes:
+                    - /n8n
+        n8n-headers:
+            headers:
+                STSSeconds: 31536000
+                forceSTSHeader: true
+                STSIncludeSubdomains: true
+                browserXSSFilter: true
+                contentTypeNosniff: true

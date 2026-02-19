@@ -10,6 +10,8 @@ services:
         command:
             - "--providers.docker=true"
             - "--providers.docker.exposedbydefault=false"
+            - "--providers.file.directory=/traefik/dynamic"
+            - "--providers.file.watch=true"
 
             - "--entrypoints.web.address=:80"
             - "--entrypoints.websecure.address=:443"
@@ -25,6 +27,7 @@ services:
 
         volumes:
             - traefik_data:/letsencrypt
+            - ./traefik/dynamic:/traefik/dynamic:ro
             - /var/run/docker.sock:/var/run/docker.sock:ro
 
     # Note that we always need some web service running in order for the TLS challenge to work
@@ -59,6 +62,7 @@ services:
         restart: unless-stopped
 
         # Required by at least ZMAP
+        network_mode: host
         cap_add:
             - NET_RAW
             - NET_ADMIN
@@ -74,37 +78,6 @@ services:
             - NODE_ENV=production
             # Allow to read and write from our volume
             - N8N_RESTRICT_FILE_ACCESS_TO="/files"
-
-        labels:
-            - "traefik.enable=true"
-
-            # Router for HTTP → HTTPS redirection
-            - "traefik.http.routers.n8n-http.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/n8n`)"
-            - "traefik.http.routers.n8n-http.entrypoints=web"
-            - "traefik.http.routers.n8n-http.middlewares=redirect-to-https"
-            - "traefik.http.routers.n8n-http.priority=2"
-            - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-
-            # Router for HTTPS with path-based routing
-            - "traefik.http.routers.n8n.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/n8n`)"
-            - "traefik.http.routers.n8n.entrypoints=websecure"
-            - "traefik.http.routers.n8n.tls=true"
-            - "traefik.http.routers.n8n.tls.certresolver=le"
-
-            # n8n listens internally on 5678
-            - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-
-            # Security headers
-            - "traefik.http.middlewares.n8n-headers.headers.STSSeconds=31536000"
-            - "traefik.http.middlewares.n8n-headers.headers.forceSTSHeader=true"
-            - "traefik.http.middlewares.n8n-headers.headers.STSIncludeSubdomains=true"
-            - "traefik.http.middlewares.n8n-headers.headers.browserXSSFilter=true"
-            - "traefik.http.middlewares.n8n-headers.headers.contentTypeNosniff=true"
-
-            - "traefik.http.middlewares.n8n-strip.stripPrefix.prefixes=/n8n"
-
-            # Attach all middlewares
-            - "traefik.http.routers.n8n.middlewares=n8n-strip@docker,n8n-headers@docker"
 
         volumes:
             - n8n_data:/home/root/.n8n

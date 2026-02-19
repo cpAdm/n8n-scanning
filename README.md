@@ -20,10 +20,14 @@ Get a working container with n8n, the scanning tools, and the contact page:
     1. `DOMAIN_NAME`: the host name where your server is running
     2. `SSL_EMAIL`: the email address to use for the TLS/SSL certificate creation
 
-4. Prepare your contact page. Either provide your own files or copy the `/web-template` folder to `/web` and adjust the
+4. Copy `traefik/dynamic/n8n.yml` to `traefik/dynamic/n8n.yml`, and replace placeholders:
+    1. `DOMAIN_NAME`: the host name where your server is running
+    2. `DOMAIN_IP`: the IP of your server
+
+5. Prepare your contact page. Either provide your own files or copy the `/web-template` folder to `/web` and adjust the
    template contact page to match your scanning project and contact details and remove the banner.
 
-5. Build the image and start the container:
+6. Build the image and start the container:
     ```shell
     docker compose -p n8n-scanning up -d --build
     ```
@@ -80,4 +84,10 @@ When you make changes, build and start the container again with the aforemention
 
 - [Contribution guide](CONTRIBUTING.md)
 - [n8n docs](https://docs.n8n.io/)
- 
+
+## FAQ
+
+Q1: ZMAP hangs before it actually starts scanning.
+
+A1: It might get stuck at getting the MAC address. Try specifying it yourselves with `--gateway-mac` (see
+`ip neigh show` for the right value)
