@@ -1,4 +1,4 @@
 **/*.env
 **/*/node_modules
 /web/**
-/traefik/dynamic/n8n.yml
+/traefik/dynamic/traefik.yml

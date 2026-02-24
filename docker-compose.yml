@@ -11,7 +11,6 @@ services:
             - "--providers.docker=true"
             - "--providers.docker.exposedbydefault=false"
             - "--providers.file.directory=/traefik/dynamic"
-            - "--providers.file.watch=true"
 
             - "--entrypoints.web.address=:80"
             - "--entrypoints.websecure.address=:443"

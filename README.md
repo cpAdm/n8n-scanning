@@ -20,7 +20,7 @@ Get a working container with n8n, the scanning tools, and the contact page:
     1. `DOMAIN_NAME`: the host name where your server is running
     2. `SSL_EMAIL`: the email address to use for the TLS/SSL certificate creation
 
-4. Copy `traefik/dynamic/n8n.yml` to `traefik/dynamic/n8n.yml`, and replace placeholders:
+4. Copy `traefik.default.yml` to `traefik/dynamic/traefik.yml`, and replace placeholders:
     1. `DOMAIN_NAME`: the host name where your server is running
     2. `DOMAIN_IP`: the IP of your server
 
