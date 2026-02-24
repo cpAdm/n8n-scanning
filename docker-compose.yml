@@ -70,6 +70,7 @@ services:
             - N8N_PROTOCOL=https
             - N8N_HOST=${DOMAIN_NAME}
             - WEBHOOK_URL=https://${DOMAIN_NAME}/n8n/
+            - N8N_ENDPOINT_HEALTH=n8n/healthz
             - N8N_PORT=5678
             - N8N_PATH=/n8n/
             # We run as root, not as 'node' user
