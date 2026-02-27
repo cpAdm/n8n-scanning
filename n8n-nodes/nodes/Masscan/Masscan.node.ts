@@ -5,8 +5,8 @@ import {
 	INodeTypeDescription,
 	NodeOperationError,
 } from 'n8n-workflow';
-import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
-import { parseJSONFile, writeTempFile } from '../../utils/file';
+import { emptyReturnData, execPromise } from '../../utils/command';
+import { parseJSONFile, writeDataFile } from '../../utils/file';
 import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
@@ -36,15 +36,19 @@ export class Masscan implements INodeType {
 	async execute(this: IExecuteFunctions) {
 		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
 
-		const jsonOutputFile = await writeTempFile('', 'json');
-		const targetFile = await writeTempFile(targets.join(os.EOL), 'txt');
-		const excludedTargetsFile = await writeTempFile(excludedTargets.join(os.EOL), 'txt');
+		const jsonOutputFile = await writeDataFile('', 'masscan-output', 'json');
+		const targetFile = await writeDataFile(targets.join(os.EOL), 'masscan-targets', 'txt');
+		const excludedTargetsFile = await writeDataFile(
+			excludedTargets.join(os.EOL),
+			'masscan-excluded-targets',
+			'txt',
+		);
 
 		const command = `masscan ${cmdOptions} -oJ ${jsonOutputFile} --includefile ${targetFile} --excludefile ${excludedTargetsFile}`;
 		let res = emptyReturnData();
 		let data = [];
 		if (isWorkflowActive) {
-			res = await execPromiseInTmp(command);
+			res = await execPromise(command);
 			if (res.exitCode !== 0) {
 				throw new NodeOperationError(this.getNode(), `masscan exited with code ${res.exitCode}`, {
 					description: res.stderr,

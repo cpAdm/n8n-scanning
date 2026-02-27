@@ -5,8 +5,8 @@ import {
 	INodeTypeDescription,
 	NodeOperationError,
 } from 'n8n-workflow';
-import { emptyReturnData, execPromiseInTmp } from '../../utils/command';
-import { parseXMLFile, writeTempFile } from '../../utils/file';
+import { emptyReturnData, execPromise } from '../../utils/command';
+import { parseXMLFile, writeDataFile } from '../../utils/file';
 import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
@@ -36,15 +36,19 @@ export class Nmap implements INodeType {
 	async execute(this: IExecuteFunctions) {
 		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
 
-		const xmlOutputFile = await writeTempFile('', 'xml');
-		const targetFile = await writeTempFile(targets.join(os.EOL), 'txt');
-		const excludedTargetsFile = await writeTempFile(excludedTargets.join(os.EOL), 'txt');
+		const xmlOutputFile = await writeDataFile('', 'nmap-output', 'xml');
+		const targetFile = await writeDataFile(targets.join(os.EOL), 'nmap-targets', 'txt');
+		const excludedTargetsFile = await writeDataFile(
+			excludedTargets.join(os.EOL),
+			'nmap-excluded-targets',
+			'txt',
+		);
 
 		const command = `nmap ${cmdOptions} -oX ${xmlOutputFile} -iL ${targetFile} --excludefile ${excludedTargetsFile}`;
 		let res = emptyReturnData();
 		let data = {};
 		if (isWorkflowActive) {
-			res = await execPromiseInTmp(command);
+			res = await execPromise(command);
 			if (res.exitCode !== 0) {
 				throw new NodeOperationError(this.getNode(), `Nmap exited with code ${res.exitCode}`, {
 					description: res.stderr,

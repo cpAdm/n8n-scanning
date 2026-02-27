@@ -35,7 +35,7 @@ test(
         console.log('Webhook triggered:', JSON.stringify(result, null, 2));
         assert.match(
             result?.nmaprun?.args,
-            /^nmap -p 80 -oX \/tmp\/[a-f0-9]+xml -iL \/tmp\/[a-f0-9]+txt --excludefile \/tmp\/[a-f0-9]+txt$/
+            /^nmap -p 80 -oX \/files\/.+-nmap-output\.xml -iL \/files\/.+-nmap-targets\.txt --excludefile \/files\/.+-nmap-excluded-targets\.txt$/
         );
         assert.equal(result?.nmaprun?.runstats?.hosts.total, "1");
     }
