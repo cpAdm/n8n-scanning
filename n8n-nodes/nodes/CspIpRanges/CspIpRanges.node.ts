@@ -43,28 +43,29 @@ export class CspIpRanges implements INodeType {
 
 	async execute(this: IExecuteFunctions) {
 		const providers = this.getNodeParameter('CSPs', 0) as string[];
-		const result: PrefixDataWithCount[] = [];
+		const results = await Promise.all(
+			providers.map(async (provider) => {
+				const data = await getIpRangesForCSP(this, provider as CSPValue);
 
-		for (const provider of providers) {
-			const data = await getIpRangesForCSP(this, provider as CSPValue);
-			if (data === null) {
-				throw new NodeOperationError(this.getNode(), 'Invalid CSP', {
-					description: `Found unsupported CSP: '${provider}'`,
-				});
-			}
+				if (data === null) {
+					throw new NodeOperationError(this.getNode(), 'Invalid CSP', {
+						description: `Found unsupported CSP: '${provider}'`,
+					});
+				}
 
-			// Note that summation of prefixes is not necessarily actual total - there might be overlapping prefixes
-			const prefixData = data.map(
-				(value) =>
-					({
-						...value,
-						ipsInPrefix: countIPsInPrefix(value.ipPrefix),
-						ipVersion: getVersionFromPrefix(value.ipPrefix),
-					}) as const,
-			);
+				// Note that summation of prefixes is not necessarily actual total - there might be overlapping prefixes
+				return data.map(
+					(value) =>
+						({
+							...value,
+							ipsInPrefix: countIPsInPrefix(value.ipPrefix),
+							ipVersion: getVersionFromPrefix(value.ipPrefix),
+						}) as const,
+				);
+			}),
+		);
 
-			result.push(...prefixData);
-		}
+		const result: PrefixDataWithCount[] = results.flat();
 
 		return [this.helpers.returnJsonArray(result)];
 	}
