@@ -1,13 +1,6 @@
-import os from 'os';
-import {
-	IExecuteFunctions,
-	INodeType,
-	INodeTypeDescription,
-	NodeOperationError,
-} from 'n8n-workflow';
-import { emptyReturnData, execPromise } from '../../utils/command';
-import { parseXMLFile, writeDataFile } from '../../utils/file';
-import { getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
+import { IExecuteFunctions, INodeType, INodeTypeDescription } from 'n8n-workflow';
+import { writeDataFile } from '../../utils/file';
+import { executeTool, getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
 export class Nmap implements INodeType {
@@ -25,51 +18,16 @@ export class Nmap implements INodeType {
 			ScannerProperties.notice,
 			{
 				...ScannerProperties.commandOptions,
-				placeholder: '-sn',
+				placeholder: '-iL targets.txt --excludefile blocklist.txt -sn ',
 				description: "Additional options to pass to 'Nmap'",
 			},
-			ScannerProperties.targetKey,
-			ScannerProperties.excludedTargetKey,
 		],
 	};
 
 	async execute(this: IExecuteFunctions) {
-		const { isWorkflowActive, cmdOptions, targets, excludedTargets } = getParams(this);
-
+		const { cmdOptions } = getParams(this);
 		const xmlOutputFile = await writeDataFile('', 'nmap-output', 'xml');
-		const targetFile = await writeDataFile(targets.join(os.EOL), 'nmap-targets', 'txt');
-		const excludedTargetsFile = await writeDataFile(
-			excludedTargets.join(os.EOL),
-			'nmap-excluded-targets',
-			'txt',
-		);
-
-		const command = `nmap ${cmdOptions} -oX ${xmlOutputFile} -iL ${targetFile} --excludefile ${excludedTargetsFile}`;
-		let res = emptyReturnData();
-		let data = {};
-		if (isWorkflowActive) {
-			res = await execPromise(command);
-			if (res.exitCode !== 0) {
-				throw new NodeOperationError(this.getNode(), `Nmap exited with code ${res.exitCode}`, {
-					description: res.stderr,
-				});
-			}
-			// TODO Find suitable data format
-			data = await parseXMLFile(xmlOutputFile);
-		}
-
-		// TODO Should we read the ip ranges from input, and link it the tool output?
-		//  https://docs.n8n.io/integrations/creating-nodes/build/reference/paired-items/
-
-		// TODO use prepareBinaryData instead for better performance?
-		// See read/write n8n node for example on how to work with binary data
-		// await this.helpers.prepareBinaryData(Buffer.from(JSON.stringify(result)), 'nmap.json');
-		return [
-			this.helpers.returnJsonArray(data),
-			this.helpers.returnJsonArray({
-				command: command,
-				stdout: res.stdout,
-			}),
-		];
+		const command = `nmap ${cmdOptions} -oX ${xmlOutputFile}`;
+		return executeTool(this, command, xmlOutputFile);
 	}
 }

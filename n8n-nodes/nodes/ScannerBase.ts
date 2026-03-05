@@ -5,7 +5,7 @@ import {
 	NodeConnectionTypes,
 	NodeOperationError,
 } from 'n8n-workflow';
-import get from 'lodash/get';
+import { emptyReturnData, execPromise } from '../utils/command';
 
 // TODO Add scanner node for ZGrab2
 
@@ -15,14 +15,15 @@ export const ScannerDescription = {
 	inputs: [NodeConnectionTypes.Main, NodeConnectionTypes.Main],
 	inputNames: ['Targets', 'Excluded targets'],
 	requiredInputs: [0],
-	outputs: [NodeConnectionTypes.Main, NodeConnectionTypes.Main],
-	outputNames: ['Raw output', 'Parsed output'],
+	outputs: [NodeConnectionTypes.Main],
+	outputNames: ['Output'],
 } satisfies Partial<INodeTypeDescription>;
 
 export const ScannerProperties = {
+	// TODO Add custom notice for each scanner to see what cmd options are available?
 	notice: {
 		displayName:
-			'Use with caution, only use trusted inputs!<br><br>If the workflow is inactive, this node will not call the scanner.',
+			'Use with caution, only use trusted inputs! <br><br>If the workflow is inactive, this node will not call the scanner.',
 		name: 'notice',
 		type: 'notice',
 		default: '',
@@ -35,54 +36,35 @@ export const ScannerProperties = {
 		// placeholder: '-sn',
 		description: 'Additional options to pass to the scanner',
 	},
-	// Inspired by: https://github.com/n8n-io/n8n/blob/master/packages/nodes-base/nodes/CompareDatasets/CompareDatasets.node.ts
-	targetKey: {
-		displayName: 'Target Key',
-		required: true,
-		name: 'targetKey',
-		type: 'string',
-		default: 'ipPrefix',
-		allowArbitraryValues: false,
-		requiresDataPath: 'single', // Ability to drag field from the input in UI to this input
-		description: "Key in the 'Targets' input entries that is the IP Prefix (in CIDR notation)",
-	},
-	excludedTargetKey: {
-		displayName: 'Excluded Target Key',
-		name: 'excludedTargetKey',
-		type: 'string',
-		default: 'ipPrefix',
-		allowArbitraryValues: false,
-		requiresDataPath: 'single',
-		description:
-			"Key in the 'Excluded targets' input entries that is the IP Prefix (in CIDR notation)",
-	},
 } satisfies Record<string, INodeProperties>;
 
 export function getParams(functions: IExecuteFunctions) {
-	const isWorkflowActive = functions.getWorkflow().active;
-	const targetInput = functions.getInputData(0);
-	const excludedTargetInput = functions.getInputData(1);
-
-	// TODO verify parameters
 	const cmdOptions = functions.getNodeParameter('cmdOptions', 0, '') as string;
-	const targetKey = functions.getNodeParameter('targetKey', 0) as string;
-	const excludedTargetKey = functions.getNodeParameter('excludedTargetKey', 0) as string;
+	return {
+		cmdOptions,
+	};
+}
 
-	const targets = targetInput.map((input) => get(input.json, targetKey)).filter(Boolean);
-	if (targets.length === 0) {
-		throw new NodeOperationError(functions.getNode(), 'No targets found', {
-			description: `Check if Target Key "${targetKey}" is correct. `,
-		});
+export async function executeTool(
+	functions: IExecuteFunctions,
+	command: string,
+	outputFile: string,
+) {
+	let res = emptyReturnData();
+	if (functions.getWorkflow().active) {
+		res = await execPromise(command);
+		if (res.exitCode !== 0) {
+			throw new NodeOperationError(functions.getNode(), `Exited with code ${res.exitCode}`, {
+				description: res.stderr,
+			});
+		}
 	}
 
-	const excludedTargets = excludedTargetKey
-		? excludedTargetInput.map((input) => get(input.json, excludedTargetKey)).filter(Boolean)
-		: [];
-
-	return {
-		isWorkflowActive,
-		cmdOptions,
-		targets,
-		excludedTargets,
-	};
+	return [
+		functions.helpers.returnJsonArray({
+			...res,
+			command: command,
+			outputFile: outputFile,
+		}),
+	];
 }

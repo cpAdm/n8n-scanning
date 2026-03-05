@@ -25,7 +25,6 @@ export async function execPromise(command: string): Promise<IExecReturnData> {
 	const returnData = emptyReturnData();
 
 	return await new Promise((resolve) => {
-		// TODO can we stream progress via this.sendMessageToUI (F12 console) for debugging?
 		exec(command, { cwd: SHARED_DIR }, (error, stdout, stderr) => {
 			returnData.stdout = stdout.trim();
 			returnData.stderr = stderr.trim();
