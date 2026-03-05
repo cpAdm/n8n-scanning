@@ -66,6 +66,8 @@ services:
             - NET_RAW
             - NET_ADMIN
 
+        env_file:
+            - .env
         environment:
             - N8N_PROTOCOL=https
             - N8N_HOST=${DOMAIN_NAME}
