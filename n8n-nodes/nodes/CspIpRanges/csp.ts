@@ -238,7 +238,7 @@ export async function getIpRangesForCSP(
 		data.split('\n').forEach((rowRaw) => {
 			const [ipPrefix, countryCode, subdivisionCode, city, postalCode] = rowRaw.split(',');
 			result.push({
-				csp: 'cloudflare',
+				csp: 'digital_ocean',
 				ipPrefix: ipPrefix,
 				meta: { countryCode, subdivisionCode, city, postalCode },
 			});
