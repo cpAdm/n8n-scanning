@@ -1,87 +1,88 @@
 {
-  "name": "My workflow",
-  "nodes": [
-    {
-      "parameters": {
-        "cmdOptions": "-p 80",
-        "targetKey": "url"
-      },
-      "type": "CUSTOM.nmap",
-      "typeVersion": 1,
-      "position": [
-        464,
-        0
-      ],
-      "id": "7220b8b2-b1c0-499a-aa41-a0b812329c3d",
-      "name": "Nmap"
+    "name": "My workflow",
+    "nodes": [
+        {
+            "parameters": {
+                "cmdOptions": "=-p 80 {{ $json.url }}"
+            },
+            "type": "CUSTOM.nmap",
+            "typeVersion": 1,
+            "position": [
+                864,
+                288
+            ],
+            "id": "dff70416-0a57-4e76-90ff-cc2c104d6553",
+            "name": "Nmap"
+        },
+        {
+            "parameters": {
+                "path": "4fbcd73c-c822-4be7-b984-03ea4cf5ef44",
+                "responseMode": "lastNode",
+                "responseData": "allEntries",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                416,
+                288
+            ],
+            "id": "e13d7435-ac3c-4f13-adc0-a3265ca6b807",
+            "name": "Webhook",
+            "webhookId": "4fbcd73c-c822-4be7-b984-03ea4cf5ef44"
+        },
+        {
+            "parameters": {
+                "mode": "raw",
+                "jsonOutput": "{\n  \"url\": \"scanme.nmap.org\"\n}\n",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                640,
+                288
+            ],
+            "id": "220e3cd0-7d72-481a-9011-ce3dbf55c085",
+            "name": "Edit Fields"
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Edit Fields",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Edit Fields": {
+            "main": [
+                [
+                    {
+                        "node": "Nmap",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
     },
-    {
-      "parameters": {
-        "path": "4fbcd73c-c822-4be7-b984-03ea4cf5ef44",
-        "responseMode": "lastNode",
-        "responseData": "allEntries",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        16,
-        0
-      ],
-      "id": "48168926-a305-4963-b937-1bf52789cdf7",
-      "name": "Webhook",
-      "webhookId": "4fbcd73c-c822-4be7-b984-03ea4cf5ef44"
+    "active": false,
+    "settings": {
+        "executionOrder": "v1",
+        "binaryMode": "separate",
+        "availableInMCP": false
     },
-    {
-      "parameters": {
-        "mode": "raw",
-        "jsonOutput": "{\n  \"url\": \"scanme.nmap.org\"\n}\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        240,
-        0
-      ],
-      "id": "3ffe9de6-970c-4775-9a39-58fc3311404a",
-      "name": "Edit Fields"
-    }
-  ],
-  "pinData": {},
-  "connections": {
-    "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Edit Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "versionId": "605be22e-ef46-4512-b99f-9db4b37a7800",
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "c90b1d667c66b3fe97fcf863613c281592fb6a8d439e6fe58ed84836a8b1d22c"
     },
-    "Edit Fields": {
-      "main": [
-        [
-          {
-            "node": "Nmap",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1",
-    "availableInMCP": false
-  },
-  "versionId": "c532a70f-0164-43ac-9b1e-2c7eefaca4ae",
-  "meta": {
-    "instanceId": "24732f2554b6d313cbd73d88810ea497f61857882ef857b060820f0d70cd2828"
-  },
-  "id": "oWwd61ed8nAcnp3-4tGq1",
-  "tags": []
+    "id": "qJpUZmMP1IoHoiMJ",
+    "tags": []
 }

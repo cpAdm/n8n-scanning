@@ -33,10 +33,14 @@ test(
         assert.ok(webhookResponse.ok, JSON.stringify(result, null, 2));
 
         console.log('Webhook triggered:', JSON.stringify(result, null, 2));
-        assert.match(
-            result?.nmaprun?.args,
-            /^nmap -p 80 -oX \/files\/.+-nmap-output\.xml -iL \/files\/.+-nmap-targets\.txt --excludefile \/files\/.+-nmap-excluded-targets\.txt$/
-        );
-        assert.equal(result?.nmaprun?.runstats?.hosts.total, "1");
+
+        assert.equal(result?.exitCode, 0);
+        assert.equal(result?.stderr, "");
+        assert.match(result?.stdout, /Starting Nmap \d+\.\d+/);
+        assert.match(result?.stdout, /Nmap scan report for scanme\.nmap\.org/);
+        assert.match(result?.stdout, /80\/tcp\s+open\s+http/);
+        assert.match(result?.stdout, /Nmap done: 1 IP address/);
+        assert.match(result?.command, /^nmap -p 80 scanme\.nmap\.org -oX \S+\.xml/);
+        assert.match(result?.outputFile, /\/files\/\S+-nmap-output.xml/);
     }
 );

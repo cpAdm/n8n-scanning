@@ -18,7 +18,7 @@ function cleanWorkflowForAPI(workflow: Record<string, unknown>) {
         connections: workflow.connections,
         name: workflow.name,
         nodes: workflow.nodes,
-        settings: workflow.settings ?? {},
+        settings: {},
         shared: workflow.shared,
         staticData: workflow.staticData
     };
