@@ -1,6 +1,17 @@
 import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
-// TODO other CSPs
+// Matches IPv4: x.x.x.x/xx or IPv6: x:x:x:x:x:x:x:x/xx
+const CIDR_REGEX = /([0-9a-f.:]+\/\d+)/gi;
+
+// TODO (we maybe should decouple this into a separate repo that updates daily? - with JSON schema)
+
+// TODO Not implemented for these providers:
+// - Alibaba Cloud, does not publish its ranges, but we could pull prefixes from BGP for AS45102
+// - OVH Cloud, IP ranges spreadout trough its documenation: https://help.ovhcloud.com/csm/en-gb-search?id=kb_search&query=List%20of%20IP&language=en
+// - Tencent Cloud, does not publish is ranges
+// - Rackspace, does not publish is ranges
+// - Apache, does not publish is ranges
+// - Huwawei Cloud, does not publish is ranges
 export const CSP_OPTIONS = [
 	{
 		name: 'Amazon Web Services',
@@ -22,13 +33,19 @@ export const CSP_OPTIONS = [
 		name: 'Digital Ocean',
 		value: 'digital_ocean',
 	},
-	// TODO IBM is a bit more tricky. There is no JSON file, just the markdown of their documentation:
-	// https://github.com/ibm-cloud-docs/infrastructure-hub/blob/master/ips.md
-	// (we could maybe decouple this into a separate repo that updates daily?)
-	// {
-	// 	name: 'IBM Cloud',
-	// 	value: 'IBM',
-	// },
+	{
+		name: 'IBM Cloud',
+		value: 'IBM',
+	},
+	{
+		name: 'Oracle Cloud',
+		value: 'oracle_cloud',
+	},
+	{
+		// Choopa was acquired by Vultr
+		name: 'Vultr',
+		value: 'vultr',
+	},
 ] as const;
 export type CSPValue = (typeof CSP_OPTIONS)[number]['value'];
 
@@ -96,6 +113,30 @@ type CloudflareData = {
 	messages: unknown;
 };
 
+type OracleCloudData = {
+	last_updated_timestamp: string;
+	regions: {
+		region: string;
+		cidrs: {
+			cidr: string;
+			tags: string[];
+		}[];
+	}[];
+};
+
+type VultrData = {
+	asn: number;
+	email: string;
+	updated: string;
+	subnets: {
+		ip_prefix: string;
+		alpha2code: string;
+		region: string;
+		city: string;
+		postal_code: string;
+	}[];
+};
+
 export type PrefixData = {
 	csp: CSPValue;
 	ipPrefix: string;
@@ -109,6 +150,7 @@ export type PrefixData = {
 		subdivisionCode: string;
 		city: string;
 		postalCode: string;
+		tags: string[];
 	}>;
 };
 
@@ -201,27 +243,27 @@ export async function getIpRangesForCSP(
 		})) as CloudflareData;
 
 		const result: PrefixData[] = [];
-		data.result.ipv4_cidrs.forEach((prefix) =>
+		for (const prefix of data.result.ipv4_cidrs) {
 			result.push({
 				csp: 'cloudflare',
 				ipPrefix: prefix,
 				meta: { service: 'CLOUDFLARE' },
-			}),
-		);
-		data.result.ipv6_cidrs.forEach((prefix) =>
+			});
+		}
+		for (const prefix of data.result.ipv6_cidrs) {
 			result.push({
 				csp: 'cloudflare',
 				ipPrefix: prefix,
 				meta: { service: 'CLOUDFLARE' },
-			}),
-		);
-		data.result.jdcloud_cidrs.forEach((prefix) =>
+			});
+		}
+		for (const prefix of data.result.jdcloud_cidrs) {
 			result.push({
 				csp: 'cloudflare',
 				ipPrefix: prefix,
 				meta: { service: 'JD_CLOUD' },
-			}),
-		);
+			});
+		}
 
 		return result;
 	}
@@ -235,15 +277,84 @@ export async function getIpRangesForCSP(
 
 		// This is a CSV file with rows formatted as: <ip_prefix>,<country_code>,<subdivision_code>,<city>,<postal_code>
 		const result: PrefixData[] = [];
-		data.split('\n').forEach((rowRaw) => {
+		for (const rowRaw of data.split('\n')) {
 			const [ipPrefix, countryCode, subdivisionCode, city, postalCode] = rowRaw.split(',');
 			result.push({
 				csp: 'digital_ocean',
 				ipPrefix: ipPrefix,
 				meta: { countryCode, subdivisionCode, city, postalCode },
 			});
-		});
+		}
 
+		return result;
+	}
+
+	if (provider === 'IBM') {
+		// IBM does not provide simple machine-readable format, so we scrape it from their documentation
+		// https://cloud.ibm.com/docs/security-groups?topic=security-groups-ibm-cloud-ip-ranges
+		const data = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: 'https://raw.githubusercontent.com/ibm-cloud-docs/infrastructure-hub/refs/heads/master/ips.md',
+		})) as string;
+
+		// Parse IP prefixes from all the Markdown tables
+		const result: PrefixData[] = [];
+		for (const line of data.split('\n')) {
+			// Check if this is a table data row (starts with |)
+			if (line.trim().startsWith('|')) {
+				for (const match of line.matchAll(CIDR_REGEX)) {
+					result.push({
+						csp: 'IBM',
+						ipPrefix: match[1],
+						meta: {},
+					});
+				}
+			}
+		}
+
+		return result;
+	}
+
+	if (provider === 'oracle_cloud') {
+		// https://docs.oracle.com/en-us/iaas/Content/General/Concepts/addressranges.htm
+		const data = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: 'https://docs.oracle.com/en-us/iaas/tools/public_ip_ranges.json',
+		})) as OracleCloudData;
+
+		const result: PrefixData[] = [];
+		for (const region of data.regions) {
+			for (const cidr of region.cidrs) {
+				result.push({
+					csp: 'oracle_cloud',
+					ipPrefix: cidr.cidr,
+					meta: { region: region.region, tags: cidr.tags },
+				});
+			}
+		}
+		return result;
+	}
+
+	if (provider === 'vultr') {
+		// https://docs.vultr.com/vultr-ip-space
+		const data = (await functions.helpers.httpRequest({
+			method: 'GET',
+			url: 'https://geofeed.constant.com/?json',
+		})) as VultrData;
+
+		const result: PrefixData[] = [];
+		for (const subnet of data.subnets) {
+			result.push({
+				csp: 'vultr',
+				ipPrefix: subnet.ip_prefix,
+				meta: {
+					region: subnet.region,
+					countryCode: subnet.alpha2code,
+					city: subnet.city,
+					postalCode: subnet.postal_code,
+				},
+			});
+		}
 		return result;
 	}
 
