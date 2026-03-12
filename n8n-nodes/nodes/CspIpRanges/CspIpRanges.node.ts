@@ -1,3 +1,5 @@
+import path from 'node:path';
+import fs from 'node:fs/promises';
 import {
 	IExecuteFunctions,
 	INodeType,
@@ -7,6 +9,7 @@ import {
 } from 'n8n-workflow';
 import { countIPsInPrefix, getVersionFromPrefix } from '../../utils/ip';
 import { CSP_OPTIONS, type CSPValue, getIpRangesForCSP, type PrefixData } from './csp';
+import { writeDataFile } from '../../utils/file';
 
 // TODO Add tests
 
@@ -28,7 +31,9 @@ export class CspIpRanges implements INodeType {
 			name: 'IP Ranges: CSPs',
 		},
 		inputs: [NodeConnectionTypes.Main],
-		outputs: [NodeConnectionTypes.Main],
+		// Include a second file output, its filename can then easily be used in scanner CLI option via {{ $json.filePath }}
+		outputs: [NodeConnectionTypes.Main, NodeConnectionTypes.Main],
+		outputNames: ['JSON', 'Target File'],
 		usableAsTool: true,
 		properties: [
 			{
@@ -91,8 +96,23 @@ export class CspIpRanges implements INodeType {
 			.flat()
 			.filter((entry) => ipVersions.includes(entry.ipVersion));
 
+		// Build the target file content: one IP prefix per line for --input-file scanner options
+		const prefixLines = result.map((e) => e.ipPrefix).join('\n');
+		const filePath = await writeDataFile(prefixLines, 'csp-ip-ranges', 'txt');
+		const fileBuffer = await fs.readFile(filePath);
+		const binaryData = await this.helpers.prepareBinaryData(
+			fileBuffer,
+			path.basename(filePath),
+			'text/plain',
+		);
+
+		const fileItem = {
+			json: { filePath, lineCount: result.length },
+			binary: { data: binaryData },
+		};
+
 		if (includeMetadata) {
-			return [this.helpers.returnJsonArray(result)];
+			return [this.helpers.returnJsonArray(result), [fileItem]];
 		}
 
 		const stripped: Omit<PrefixDataWithCount, 'meta'>[] = result.map(
@@ -103,6 +123,7 @@ export class CspIpRanges implements INodeType {
 				ipVersion,
 			}),
 		);
-		return [this.helpers.returnJsonArray(stripped)];
+
+		return [this.helpers.returnJsonArray(stripped), [fileItem]];
 	}
 }
