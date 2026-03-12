@@ -4,10 +4,9 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeConnectionTypes,
-	NodeOperationError,
 } from 'n8n-workflow';
 import { countIPsInPrefix, getVersionFromPrefix } from '../../utils/ip';
-import { CSP_OPTIONS, type CSPValue, getIpRangesForCSP, type PrefixData } from './csp';
+import { CSP_OPTIONS, type CSPValue, getIpRangesFromRepo, type PrefixData } from './csp';
 import { writeDataFile } from '../../utils/file';
 
 // TODO Add tests
@@ -61,38 +60,35 @@ export class CspIpRanges implements INodeType {
 				description:
 					'Whether to include CSP-provided metadata (region, service, country code, etc.) on each item',
 			},
+			{
+				displayName: 'Data Date',
+				name: 'dataDate',
+				type: 'string',
+				default: '',
+				placeholder: 'YYYY-MM-DD',
+				description:
+					"Date (YYYY-MM-DD) of the IP ranges snapshot to fetch from the repository. Leave empty to use today's date.",
+			},
 		],
 	};
 
 	async execute(this: IExecuteFunctions) {
-		const providers = this.getNodeParameter('CSPs', 0) as string[];
+		const providers = this.getNodeParameter('CSPs', 0) as CSPValue[];
 		const ipVersions = this.getNodeParameter('ipVersion', 0) as number[];
 		const includeMetadata = this.getNodeParameter('includeMetadata', 0) as boolean;
+		const dateParam = (this.getNodeParameter('dataDate', 0) as string).trim();
+		const date = dateParam || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-		const results = await Promise.all(
-			providers.map(async (provider) => {
-				const data = await getIpRangesForCSP(this, provider as CSPValue);
+		const allPrefixes = await getIpRangesFromRepo(this, date, providers);
 
-				if (data === null) {
-					throw new NodeOperationError(this.getNode(), 'Invalid CSP', {
-						description: `Found unsupported CSP: '${provider}'`,
-					});
-				}
-
-				// Note that summation of prefixes is not necessarily actual total - there might be overlapping prefixes
-				return data.map(
-					(value) =>
-						({
-							...value,
-							ipsInPrefix: countIPsInPrefix(value.ipPrefix),
-							ipVersion: getVersionFromPrefix(value.ipPrefix),
-						}) as const,
-				);
-			}),
-		);
-
-		const result: PrefixDataWithCount[] = results
-			.flat()
+		const result: PrefixDataWithCount[] = allPrefixes
+			.map(
+				(value): PrefixDataWithCount => ({
+					...value,
+					ipsInPrefix: countIPsInPrefix(value.ipPrefix),
+					ipVersion: getVersionFromPrefix(value.ipPrefix),
+				}),
+			)
 			.filter((entry) => ipVersions.includes(entry.ipVersion));
 
 		// Build the target file content: one IP prefix per line for --input-file scanner options
