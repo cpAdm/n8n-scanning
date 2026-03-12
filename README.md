@@ -32,9 +32,14 @@ Get a working container with n8n, the scanning tools, and the contact page:
     docker compose up -d --build
     ```
 
-The contact page will now be available at https://DOMAIN_NAME/ and the n8n workflow UI at https://DOMAIN_NAME/n8n. HTTP
-traffic is automatically redirected to use HTTPS and data (n8n workflows, Traefik, certificates, etc.) is persisted
-using Docker volumes.
+You will now have the following features:
+
+- Contact page available at https://DOMAIN_NAME/.
+- N8n editor available at https://DOMAIN_NAME/n8n. Create an account and log in to access the n8n workflow
+- Redirect any HTTP traffic to use HTTPS. Traefik will automatically generate TLS/SSL certificates for your domain using
+  Let's Encrypt.
+- Data is persisted using Docker volumes, so you can stop and start the container without losing your n8n workflows,
+  certificates, etc.
 
 ### Shutting down
 
