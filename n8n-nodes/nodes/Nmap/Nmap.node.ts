@@ -1,6 +1,12 @@
 import { IExecuteFunctions, INodeType, INodeTypeDescription } from 'n8n-workflow';
 import { writeDataFile } from '../../utils/file';
-import { createNotice, executeTool, getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
+import {
+	createNotice,
+	executeTool,
+	getParams,
+	ScannerDescription,
+	ScannerProperties,
+} from '../ScannerBase';
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
 export class Nmap implements INodeType {

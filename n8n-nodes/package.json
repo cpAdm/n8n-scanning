@@ -18,7 +18,9 @@
 		"build": "n8n-node build",
 		"build:watch": "tsc --watch",
 		"lint": "n8n-node lint",
-		"lint:fix": "n8n-node lint --fix"
+		"lint:fix": "n8n-node lint --fix",
+		"format": "prettier --check .",
+		"format:fix": "prettier --write ."
 	},
 	"files": [
 		"dist"

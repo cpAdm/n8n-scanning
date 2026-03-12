@@ -28,7 +28,7 @@ jobs:
         working-directory: ./n8n-nodes
 
       - name: Run prettier
-        run: 'npx prettier . --check'
+        run: 'npx run format'
         working-directory: ./n8n-nodes
 
       - name: Run build
