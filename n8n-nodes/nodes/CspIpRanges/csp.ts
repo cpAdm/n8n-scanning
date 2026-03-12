@@ -7,7 +7,7 @@ const CIDR_REGEX = /([0-9a-f.:]+\/\d+)/gi;
 
 // TODO Not implemented for these providers:
 // - Alibaba Cloud, does not publish its ranges, but we could pull prefixes from BGP for AS45102
-// - OVH Cloud, IP ranges spreadout trough its documenation: https://help.ovhcloud.com/csm/en-gb-search?id=kb_search&query=List%20of%20IP&language=en
+// - OVH Cloud, IP ranges spread out trough its documentation: https://help.ovhcloud.com/csm/en-gb-search?id=kb_search&query=List%20of%20IP&language=en
 // - Tencent Cloud, does not publish is ranges
 // - Rackspace, does not publish is ranges
 // - Apache, does not publish is ranges

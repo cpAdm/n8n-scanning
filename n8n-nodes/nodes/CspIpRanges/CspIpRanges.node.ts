@@ -32,7 +32,7 @@ export class CspIpRanges implements INodeType {
 		inputs: [NodeConnectionTypes.Main],
 		// Include a second file output, its filename can then easily be used in scanner CLI option via {{ $json.filePath }}
 		outputs: [NodeConnectionTypes.Main, NodeConnectionTypes.Main],
-		outputNames: ['JSON', 'Target File'],
+		outputNames: ['Targets', 'Target File'],
 		usableAsTool: true,
 		properties: [
 			{
