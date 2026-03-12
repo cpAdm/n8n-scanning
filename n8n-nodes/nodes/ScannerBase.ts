@@ -16,22 +16,27 @@ export const ScannerDescription = {
 	outputNames: ['Output'],
 } satisfies Partial<INodeTypeDescription>;
 
-export const ScannerProperties = {
-	// TODO Add custom notice for each scanner to see what cmd options are available?
-	notice: {
-		displayName:
-			'Use with caution, only use trusted inputs! <br><br>If the workflow is inactive, this node will not call the scanner.',
+export function createNotice(docUrl: string): INodeProperties {
+	return {
+		// Not all HTML elements are allowed here: https://github.com/n8n-io/n8n/blob/b97e864f93ec51246639f582e7c9788d0bc12d1a/packages/frontend/%40n8n/design-system/src/components/N8nNotice/Notice.vue#L46C3-L46C34
+		displayName: `
+			<ul>
+					<li>Use with caution, only use trusted inputs!</li>
+					<li>Scanner is skipped in inactive workflows — activate before running</li>
+					<li><a href="${docUrl}" target="_blank">View scanner documentation ↗</a></li>
+			</ul>`,
 		name: 'notice',
 		type: 'notice',
 		default: '',
-	},
+	};
+}
+
+export const ScannerProperties = {
 	commandOptions: {
 		displayName: 'Command Options',
 		name: 'cmdOptions',
 		type: 'string',
 		default: '',
-		// placeholder: '-sn',
-		description: 'Additional options to pass to the scanner',
 	},
 } satisfies Record<string, INodeProperties>;
 

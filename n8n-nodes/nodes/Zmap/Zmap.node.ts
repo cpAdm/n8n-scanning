@@ -1,6 +1,6 @@
 import { IExecuteFunctions, INodeType, INodeTypeDescription } from 'n8n-workflow';
 import { writeDataFile } from '../../utils/file';
-import { executeTool, getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
+import { createNotice, executeTool, getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
 export class Zmap implements INodeType {
@@ -15,7 +15,7 @@ export class Zmap implements INodeType {
 			name: 'ZMap',
 		},
 		properties: [
-			ScannerProperties.notice,
+			createNotice('https://github.com/zmap/zmap/wiki'),
 			{
 				...ScannerProperties.commandOptions,
 				placeholder:

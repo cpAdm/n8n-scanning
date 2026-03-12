@@ -1,6 +1,12 @@
 import { IExecuteFunctions, INodeType, INodeTypeDescription } from 'n8n-workflow';
 import { writeDataFile } from '../../utils/file';
-import { executeTool, getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
+import {
+	createNotice,
+	executeTool,
+	getParams,
+	ScannerDescription,
+	ScannerProperties,
+} from '../ScannerBase';
 
 const DEFAULT_INI = `# zgrab2 multiple configuration
 # Add one section per module, e.g.:
@@ -22,7 +28,7 @@ export class Zgrab2 implements INodeType {
 			name: 'ZGrab2',
 		},
 		properties: [
-			ScannerProperties.notice,
+			createNotice('https://github.com/zmap/zgrab2#multiple-module-usage'),
 			{
 				...ScannerProperties.commandOptions,
 				placeholder: '--input-file targets.txt --blocklist-file /files/blocklist.txt',

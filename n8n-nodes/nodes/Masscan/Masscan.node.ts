@@ -1,6 +1,6 @@
 import { IExecuteFunctions, INodeType, INodeTypeDescription } from 'n8n-workflow';
 import { writeDataFile } from '../../utils/file';
-import { executeTool, getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
+import { createNotice, executeTool, getParams, ScannerDescription, ScannerProperties } from '../ScannerBase';
 
 // noinspection JSUnusedGlobalSymbols, refered in package.json
 export class Masscan implements INodeType {
@@ -15,7 +15,7 @@ export class Masscan implements INodeType {
 			name: 'MASSCAN',
 		},
 		properties: [
-			ScannerProperties.notice,
+			createNotice('https://github.com/robertdavidgraham/masscan#usage'),
 			{
 				...ScannerProperties.commandOptions,
 				placeholder: '--includefile targets.txt --excludefile blacklist.txt -p 80',
