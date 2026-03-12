@@ -8,7 +8,7 @@ export const SHARED_DIR = '/files';
 export async function writeDataFile(
 	contents: string,
 	name: string,
-	suffix: 'txt' | 'json' | 'xml',
+	suffix: 'txt' | 'json' | 'xml' | 'ini',
 ) {
 	const timePart = new Date().toISOString().replace(/[:.]/g, '-');
 	const fileName = `${timePart}-${name}.${suffix}`;
