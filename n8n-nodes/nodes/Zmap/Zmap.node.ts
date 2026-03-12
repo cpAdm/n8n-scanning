@@ -19,7 +19,7 @@ export class Zmap implements INodeType {
 			{
 				...ScannerProperties.commandOptions,
 				placeholder:
-					'--allowlist-file targets.txt --blocklist-file blocklist.txt --output-filter="success=1 && repeat=0" -p 80',
+					'--allowlist-file targets.txt --blocklist-file /files/blocklist.txt --output-filter="success=1 && repeat=0" -p 80',
 				description: "Additional options to pass to 'ZMap'",
 			},
 		],

@@ -18,7 +18,7 @@ export class Nmap implements INodeType {
 			ScannerProperties.notice,
 			{
 				...ScannerProperties.commandOptions,
-				placeholder: '-iL targets.txt --excludefile blocklist.txt -sn ',
+				placeholder: '-iL targets.txt --excludefile  /files/blocklist.txt -sn ',
 				description: "Additional options to pass to 'Nmap'",
 			},
 		],

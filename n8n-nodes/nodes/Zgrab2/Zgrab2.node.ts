@@ -25,7 +25,7 @@ export class Zgrab2 implements INodeType {
 			ScannerProperties.notice,
 			{
 				...ScannerProperties.commandOptions,
-				placeholder: '--input-file targets.txt --blocklist-file blocklist.txt',
+				placeholder: '--input-file targets.txt --blocklist-file /files/blocklist.txt',
 				description:
 					'Additional options to pass to <code>zgrab2 multiple</code>, e.g. <code>--input-file</code> and <code>--blocklist-file</code>',
 			},

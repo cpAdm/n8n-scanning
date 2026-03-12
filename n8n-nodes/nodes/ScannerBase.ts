@@ -10,8 +10,7 @@ import { emptyReturnData, execPromise } from '../utils/command';
 export const ScannerDescription = {
 	group: ['transform'],
 	version: 1, // Should be in sync with the node.json file
-	inputs: [NodeConnectionTypes.Main, NodeConnectionTypes.Main],
-	inputNames: ['Targets', 'Excluded targets'],
+	inputs: [NodeConnectionTypes.Main],
 	requiredInputs: [0],
 	outputs: [NodeConnectionTypes.Main],
 	outputNames: ['Output'],
