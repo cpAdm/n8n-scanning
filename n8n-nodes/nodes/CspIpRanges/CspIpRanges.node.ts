@@ -1,5 +1,4 @@
-import path from 'node:path';
-import fs from 'node:fs/promises';
+import { readFile } from 'fs/promises';
 import {
 	IExecuteFunctions,
 	INodeType,
@@ -99,13 +98,8 @@ export class CspIpRanges implements INodeType {
 		// Build the target file content: one IP prefix per line for --input-file scanner options
 		const prefixLines = result.map((e) => e.ipPrefix).join('\n');
 		const filePath = await writeDataFile(prefixLines, 'csp-ip-ranges', 'txt');
-		const fileBuffer = await fs.readFile(filePath);
-		const binaryData = await this.helpers.prepareBinaryData(
-			fileBuffer,
-			path.basename(filePath),
-			'text/plain',
-		);
-
+		const fileBuffer = await readFile(filePath);
+		const binaryData = await this.helpers.prepareBinaryData(fileBuffer, filePath, 'text/plain');
 		const fileItem = {
 			json: { filePath, lineCount: result.length },
 			binary: { data: binaryData },
