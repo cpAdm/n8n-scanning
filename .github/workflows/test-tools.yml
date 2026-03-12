@@ -18,6 +18,10 @@ jobs:
         run: |
           cp .env.default .env
 
+      - name: Copy web template to web folder
+        run: |
+          cp -r web-template web
+
       - name: Build image and run container in background
         run: |
           docker compose -p n8n-scanning up -d --wait
@@ -30,7 +34,12 @@ jobs:
           docker exec n8n-scanning-n8n-1 sh -c "zmap --version"
           docker exec n8n-scanning-n8n-1 sh -c "zgrab2 --help"
 
+      - name: Verify web content is deployed in nginx
+        run: |
+          # Fetch the page and assert expected content is present
+          docker exec n8n-scanning-web-1 wget -qO- http://localhost/ | grep -q "Internet Measurement Research Project"
+          echo "Web deployment verified successfully"
+
 
 # TODO Run /tests here, but somehow we need to generate an API key?
-# TODO Verify the web part is successfully deployed (copy to web folder)
 
