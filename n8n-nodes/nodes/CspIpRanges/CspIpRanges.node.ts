@@ -38,11 +38,33 @@ export class CspIpRanges implements INodeType {
 				options: [...CSP_OPTIONS],
 				default: [],
 			},
+			{
+				displayName: 'IP Version',
+				name: 'ipVersion',
+				type: 'multiOptions',
+				options: [
+					{ name: 'IPv4', value: 4 },
+					{ name: 'IPv6', value: 6 },
+				],
+				default: [4, 6],
+				description: 'Which IP versions to include in the output',
+			},
+			{
+				displayName: 'Include Metadata',
+				name: 'includeMetadata',
+				type: 'boolean',
+				default: false, // Having less data in the workflow is better for performance
+				description:
+					'Whether to include CSP-provided metadata (region, service, country code, etc.) on each item',
+			},
 		],
 	};
 
 	async execute(this: IExecuteFunctions) {
 		const providers = this.getNodeParameter('CSPs', 0) as string[];
+		const ipVersions = this.getNodeParameter('ipVersion', 0) as number[];
+		const includeMetadata = this.getNodeParameter('includeMetadata', 0) as boolean;
+
 		const results = await Promise.all(
 			providers.map(async (provider) => {
 				const data = await getIpRangesForCSP(this, provider as CSPValue);
@@ -65,8 +87,22 @@ export class CspIpRanges implements INodeType {
 			}),
 		);
 
-		const result: PrefixDataWithCount[] = results.flat();
+		const result: PrefixDataWithCount[] = results
+			.flat()
+			.filter((entry) => ipVersions.includes(entry.ipVersion));
 
-		return [this.helpers.returnJsonArray(result)];
+		if (includeMetadata) {
+			return [this.helpers.returnJsonArray(result)];
+		}
+
+		const stripped: Omit<PrefixDataWithCount, 'meta'>[] = result.map(
+			({ csp, ipPrefix, ipsInPrefix, ipVersion }) => ({
+				csp,
+				ipPrefix,
+				ipsInPrefix,
+				ipVersion,
+			}),
+		);
+		return [this.helpers.returnJsonArray(stripped)];
 	}
 }
