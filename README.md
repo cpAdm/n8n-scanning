@@ -68,7 +68,10 @@ sudo nft list ruleset
 
 [//]: # (TODO Add more usage examples on how to get started, include workflow templates, etc.)
 
-[//]: # ( The workflow needs to be published, else scan is skipped, so e.g. use the schedule trigger)
+Remarks:
+
+- The workflow needs to be published, else scan is skipped, so e.g. use the schedule trigger to run it at a specific
+  time or interval.
 
 ### Blocklist
 

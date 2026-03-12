@@ -12,6 +12,8 @@ pipelines on this branch before merging it.
 
 ## Testing
 
+[//]: # (TODO Add more tests, e.g. unit tests for the custom nodes, more E2E tests, ...)
+
 Currently, there is limited testing in place:
 
 - The custom nodes are checked for TypeScript and Lint errors in the CI pipelines

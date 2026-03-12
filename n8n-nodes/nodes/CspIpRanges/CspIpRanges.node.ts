@@ -9,8 +9,6 @@ import { countIPsInPrefix, getVersionFromPrefix } from '../../utils/ip';
 import { CSP_OPTIONS, type CSPValue, getIpRangesFromRepo, type PrefixData } from './csp';
 import { writeDataFile } from '../../utils/file';
 
-// TODO Add tests
-
 type PrefixDataWithCount = PrefixData & {
 	ipsInPrefix: number;
 	ipVersion: 4 | 6;
