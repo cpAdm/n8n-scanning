@@ -67,7 +67,7 @@ export class CspIpRanges implements INodeType {
 				default: '',
 				placeholder: 'YYYY-MM-DD',
 				description:
-					"Date (YYYY-MM-DD) of the IP ranges snapshot to fetch from the repository. Leave empty to use today's date.",
+					'Date (YYYY-MM-DD) of the IP ranges snapshot to fetch. Leave empty to use today\'s date. Available snapshots: <a href="https://github.com/cpAdm/csp-ip-ranges/tree/main/data" target="_blank">cpAdm/csp-ip-ranges</a>',
 			},
 		],
 	};
