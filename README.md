@@ -29,7 +29,7 @@ Get a working container with n8n, the scanning tools, and the contact page:
 
 6. Build the image and start the container:
     ```shell
-    docker compose -p n8n-scanning up -d --build
+    docker compose up -d --build
     ```
 
 The contact page will now be available at https://DOMAIN_NAME/ and the n8n workflow UI at https://DOMAIN_NAME/n8n. HTTP
@@ -38,12 +38,10 @@ using Docker volumes.
 
 ### Shutting down
 
-Stop the container when done:
+Stop the containers when done:
 
 ```shell
 docker compose down
-# Or stop containers separately
-docker stop n8n-scanning-traefik-1 n8n-scanning-n8n-1 n8n-scanning-web-1
 ```
 
 ### Firewall
