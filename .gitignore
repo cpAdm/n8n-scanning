@@ -2,3 +2,4 @@
 **/*/node_modules
 /web/**
 /traefik/dynamic/traefik.yml
+/.venv/

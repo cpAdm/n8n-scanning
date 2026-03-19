@@ -10,6 +10,7 @@
           <excludedPaths>
             <excludedPath local="true" path="$PROJECT_DIR$/n8n-nodes/node_modules" />
             <excludedPath local="true" path="$PROJECT_DIR$/tests/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/.venv" />
           </excludedPaths>
         </serverdata>
       </paths>

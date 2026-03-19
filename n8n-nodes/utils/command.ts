@@ -1,4 +1,4 @@
-import { exec } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { SHARED_DIR } from './file';
 
 interface IExecReturnData {
@@ -18,24 +18,38 @@ export function emptyReturnData(): IExecReturnData {
 }
 
 /**
- * Promisifiy exec manually to also get the exit code
- * (copied from n8n's ExecuteCommand.node.ts)
+ * Spawn command and stream outputs to avoid exec() maxBuffer limits.
  */
 export async function execPromise(command: string): Promise<IExecReturnData> {
 	const returnData = emptyReturnData();
 
 	return await new Promise((resolve) => {
-		exec(command, { cwd: SHARED_DIR }, (error, stdout, stderr) => {
-			returnData.stdout = stdout.trim();
-			returnData.stderr = stderr.trim();
+		const childProcess = spawn(command, {
+			cwd: SHARED_DIR,
+			shell: true,
+		});
 
-			if (error) {
-				returnData.error = error;
+		childProcess.stdout.on('data', (chunk) => {
+			returnData.stdout += chunk.toString();
+		});
+
+		childProcess.stderr.on('data', (chunk) => {
+			returnData.stderr += chunk.toString();
+		});
+
+		childProcess.on('error', (error) => {
+			returnData.error = error;
+		});
+
+		childProcess.on('close', (code, signal) => {
+			returnData.exitCode = code ?? 1;
+			if (signal) {
+				returnData.stderr += `\nProcess terminated by signal ${signal}`;
 			}
 
+			returnData.stdout = returnData.stdout.trim();
+			returnData.stderr = returnData.stderr.trim();
 			resolve(returnData);
-		}).on('exit', (code) => {
-			returnData.exitCode = code || 0;
 		});
 	});
 }
