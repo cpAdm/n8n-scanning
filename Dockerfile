@@ -48,6 +48,9 @@ RUN apk add --no-cache \
 COPY --from=zgrab2-builder /usr/bin/zgrab2 /usr/local/bin/zgrab2
 COPY --from=zgrab2-builder /root/.config/zgrab2 /root/.config/zgrab2
 
+# Install other usefull CLI tools
+RUN apk add jq
+
 ENV N8N_CUSTOM_EXTENSIONS=/data/custom
 RUN mkdir -p /data/custom
 COPY --from=nodes-builder /tmp/custom-nodes/dist /data/custom/
