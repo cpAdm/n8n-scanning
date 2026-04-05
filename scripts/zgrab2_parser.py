@@ -28,9 +28,7 @@ class BaseScanResponse(TypedDict, total=False):
     error: NotRequired[str]
 
 
-#     TODO More accurate based on service?
-
-
+# TODO More accurate types based on service?
 class ZGrab2Response(TypedDict, total=False):
     ip: Required[str]
     data: Required[dict[str, BaseScanResponse]]

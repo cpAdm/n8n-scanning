@@ -112,7 +112,8 @@ def analyse_generic_service(
     csp_lookup: CspLookup,
     output_root: Path,
 ):
-    output_dir = ensure_output_dir(Path(output_root) / service.name)
+    output_dir = ensure_output_dir(Path(output_root))
+    analysis_prefix = f"{Path(jsonl_input_file).stem}_{service.name}_analysis"
 
     rows, module_key_counters, total_key_counters = collect_service_rows_and_counters(
         jsonl_input_file=jsonl_input_file,
@@ -130,7 +131,7 @@ def analyse_generic_service(
         status_by_csp.pivot(index="csp", columns="status", values="count").fillna(0),
         title=f"{service.display_name} status by CSP",
         ylabel="IPs",
-        out=output_dir / "status_by_csp.png",
+        out=output_dir / f"{analysis_prefix}_status_by_csp.png",
         top_n=25,
     )
 
@@ -138,7 +139,7 @@ def analyse_generic_service(
         frame["status"].value_counts(),
         title=f"{service.display_name} overall status distribution",
         ylabel="IPs",
-        out=output_dir / "overall_status.png",
+        out=output_dir / f"{analysis_prefix}_overall_status.png",
         use_status_colors=True,
     )
 
@@ -146,7 +147,7 @@ def analyse_generic_service(
         frame["version"].dropna().value_counts().head(20),
         title=f"{service.display_name} versions/banners (top 20)",
         ylabel="IPs",
-        out=output_dir / "top_versions.png",
+        out=output_dir / f"{analysis_prefix}_top_versions.png",
     )
 
     print_stats_table(service, frame)
