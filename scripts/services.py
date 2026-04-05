@@ -4,16 +4,17 @@ from typing import Any
 from csp_loader import CspLookup
 from service_analysis import analyse_generic_service
 from service_types import ServiceAnalyserProto
+from zgrab2_parser import BaseScanResponse
 
 
+# TODO Check for all services all the CLI options to see if we can get more info
 class ServiceAnalyser(ServiceAnalyserProto):
     name: str
     display_name: str
-    # TODO Check if all paths are actually correct
-    version_paths: list[str] = []
+    version_path: str | None = None
 
     @staticmethod
-    def _extract_value_by_path(obj: dict[str, Any], dotted_path: str) -> Any:
+    def _extract_value_by_path(obj: BaseScanResponse, dotted_path: str) -> Any:
         current: Any = obj
         for segment in dotted_path.split("."):
             if not isinstance(current, dict):
@@ -23,78 +24,76 @@ class ServiceAnalyser(ServiceAnalyserProto):
                 return None
         return current
 
-    def get_version(self, module: dict[str, Any]) -> Any:
-        for path in self.version_paths:
-            value = self._extract_value_by_path(module, path)
-            if value not in (None, ""):
-                return value
-
-        result = module.get("result")
-        if isinstance(result, dict):
-            return (
-                result.get("version")
-                or result.get("server_version")
-                or result.get("banner")
-                or result.get("product")
-            )
-        return None
+    def get_version(self, module: BaseScanResponse) -> Any:
+        if not self.version_path:
+            return None
+        return self._extract_value_by_path(module, self.version_path)
 
     def analyse(self, jsonl_input_file: Path, csp_lookup: CspLookup, output_root: Path):
         analyse_generic_service(self, jsonl_input_file, csp_lookup, output_root)
 
 
+# TODO Also interesting:
+#  result.build_info.build_environment.target_os
+#  Read databases: jq -r '.data.mongodb.result.database_info // empty' data/2026-03-26T15-33-23-646Z-zgrab2-output.json | sort -u
+#   - also seems to indicate that some databases have been pwned
 class MongoDbService(ServiceAnalyser):
     name = "mongodb"
     display_name = "MongoDB"
-    version_paths = ["result.build_info.version", "result.version"]
+    version_path = "result.build_info.version"
 
 
 class MySqlService(ServiceAnalyser):
     name = "mysql"
     display_name = "MySQL"
-    version_paths = ["result.server_version", "result.version"]
+    version_path = "result.server_version"
 
 
 class PostgresService(ServiceAnalyser):
     name = "postgres"
     display_name = "Postgres"
-    version_paths = ["result.server_parameters", "result.supported_versions", "result.version"]
+    # TODO Maybe "result.supported_versions"? -> does need some parsing
+    version_path = None
 
 
+# TODO Some services have result.encrypt_mode set to ENCRYPT_OFF/ENCRYPT_NOT_SUP
 class MssqlService(ServiceAnalyser):
     name = "mssql"
     display_name = "MSSQL"
-    version_paths = ["result.version", "result.prelogin_options.version.build_number"]
+    version_path = "result.version"
 
 
 class OracleService(ServiceAnalyser):
     name = "oracle"
     display_name = "Oracle"
-    version_paths = ["result.nsn_version", "result.refuse_version", "result.accept_version"]
+    version_path = None
 
 
+# TODO Also interesting: result.os, result.uptime_in_seconds, result.used_memory, result.total_connections_received, result.total_commands_processed
 class RedisService(ServiceAnalyser):
     name = "redis"
     display_name = "Redis"
-    version_paths = ["result.version", "result.build_id"]
+    version_path = "result.version"
 
 
+# TODO Also interesting: result.libevent_version, result.stats.uptime, result.stats.rusage_system, many more stats
 class MemcachedService(ServiceAnalyser):
     name = "memcached"
     display_name = "Memcached"
-    version_paths = ["result.version"]
+    version_path = "result.version"
 
 
 class RdpService(ServiceAnalyser):
     name = "rdp"
     display_name = "RDP"
-    version_paths = ["result.version", "result.protocol_version", "result.selected_protocol"]
+    version_path = "result.ntlm.os_version"
 
 
+# TODO Also see other interesting fields of result.server_id
 class SshService(ServiceAnalyser):
     name = "ssh"
     display_name = "SSH"
-    version_paths = ["result.software_version", "result.protocol_version", "result.banner"]
+    version_path = "result.server_id.version"  # E.g. 1.99/2.0/2.1
 
 
 SERVICE_ANALYSERS: list[ServiceAnalyser] = [

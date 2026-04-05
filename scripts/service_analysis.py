@@ -100,7 +100,7 @@ def print_distribution_table(
     print(
         tabulate(
             table_rows,
-            headers=["Key", "CSP", "Unique count", f"Top ({top_n} values"],
+            headers=["Key", "CSP", "Unique count", f"Top {top_n} values"],
             maxcolwidths=[None, None, None, top_value_max_width],
         )
     )

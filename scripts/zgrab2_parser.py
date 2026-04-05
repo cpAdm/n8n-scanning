@@ -1,9 +1,6 @@
 import json
 from pathlib import Path
-from typing import Generator, Literal, NotRequired, Required, TypedDict
-
-JsonScalar = str | int | float | bool | None
-JsonValue = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
+from typing import Generator, Literal, NotRequired, Required, TypedDict, Any
 
 type StatusValue = Literal[
     "success",
@@ -17,18 +14,18 @@ type StatusValue = Literal[
 ]
 
 
-# See official ZGrab2 types: https://github.com/zmap/zgrab2/blob/master/zgrab2_schemas/zgrab2/zgrab2.py
 class BaseScanResponse(TypedDict, total=False):
     # Based on zgrab2 base_scan_response schema from the comment above.
     status: Required[StatusValue]
     protocol: Required[str]
     port: Required[int]
     timestamp: Required[str]
-    result: NotRequired[dict[str, JsonValue]]
+    # See https://github.com/zmap/zgrab2/tree/master/zgrab2_schemas/zgrab2 for more accurate types based on the service
+    result: NotRequired[dict[str, Any]]
     error: NotRequired[str]
 
 
-# TODO More accurate types based on service?
+# Based on https://github.com/zmap/zgrab2/blob/master/zgrab2_schemas/zgrab2/zgrab2.py
 class ZGrab2Response(TypedDict, total=False):
     ip: Required[str]
     data: Required[dict[str, BaseScanResponse]]
