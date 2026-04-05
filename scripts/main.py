@@ -43,6 +43,7 @@ def main() -> int:
     entries, source = load_csp_entries_for_date(args.scan_date)
     csp_lookup = CspLookup.from_entries(entries)
     output_root = ensure_output_dir(args.output_root)
+    implemented_services = {service.name for service in SERVICE_ANALYSERS}
 
     print(f"Loaded CSP entries from: {source}")
     print(f"Output root: {output_root.absolute()}\n")
@@ -54,6 +55,12 @@ def main() -> int:
     print(f'\nProcessing {len(args.input_files)} input files...')
     for input_file in args.input_files:
         detected_services = set(next(iter_jsonl(input_file)).get("data").keys())
+
+        if unknown_services := sorted(detected_services - implemented_services):
+            print(
+                f"WARNING: Input '{input_file}' contains unsupported services: "
+                f"{', '.join(unknown_services)}"
+            )
 
         # Only run those analyses for services that are actually present in the input file
         for service in SERVICE_ANALYSERS:
