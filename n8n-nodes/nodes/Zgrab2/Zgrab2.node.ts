@@ -12,7 +12,6 @@ const DEFAULT_INI = `# zgrab2 multiple configuration
 # Add one section per module, e.g.:
 [http]
 port = 80
-name = http
 `;
 
 // noinspection JSUnusedGlobalSymbols, referred in package.json
