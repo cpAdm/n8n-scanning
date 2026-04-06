@@ -37,3 +37,14 @@ def iter_jsonl(path: Path | str) -> Generator[ZGrab2Response, None, None]:
         for line in handle:
             if stripped_line := line.strip():
                 yield json.loads(stripped_line)
+
+
+def extract_value_by_path(obj: BaseScanResponse, dotted_path: str) -> Any:
+    current: Any = obj
+    for segment in dotted_path.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(segment)
+        if current is None:
+            return None
+    return current

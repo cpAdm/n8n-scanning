@@ -4,7 +4,7 @@ from typing import Any
 from csp_loader import CspLookup
 from service_analysis import analyse_generic_service
 from service_types import ServiceAnalyserProto
-from zgrab2_parser import BaseScanResponse
+from zgrab2_parser import BaseScanResponse, extract_value_by_path
 
 
 # TODO Check for all services all the CLI options to see if we can get more info
@@ -13,21 +13,10 @@ class ServiceAnalyser(ServiceAnalyserProto):
     display_name: str
     version_path: str | None = None
 
-    @staticmethod
-    def _extract_value_by_path(obj: BaseScanResponse, dotted_path: str) -> Any:
-        current: Any = obj
-        for segment in dotted_path.split("."):
-            if not isinstance(current, dict):
-                return None
-            current = current.get(segment)
-            if current is None:
-                return None
-        return current
-
     def get_version(self, module: BaseScanResponse) -> Any:
         if not self.version_path:
             return None
-        return self._extract_value_by_path(module, self.version_path)
+        return extract_value_by_path(module, self.version_path)
 
     def analyse(self, jsonl_input_file: Path, csp_lookup: CspLookup, output_root: Path):
         analyse_generic_service(self, jsonl_input_file, csp_lookup, output_root)
