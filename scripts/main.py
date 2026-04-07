@@ -50,7 +50,7 @@ def main() -> int:
 
     csp_rows = [(csp, len(networks), sum(net.num_addresses for net in networks)) for csp, networks in
                 csp_lookup.networks_by_csp.items()]
-    print(tabulate(csp_rows, headers=["CSP", "Number of prefixes", "Total IPv4 addresses"]))
+    print(tabulate(csp_rows, headers=["CSP", "Number of prefixes", "Total IPv4 addresses"], intfmt=","))
 
     print(f'\nProcessing {len(args.input_files)} input files...')
     for input_file in args.input_files:

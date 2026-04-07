@@ -14,6 +14,19 @@ TOP_VALUE_MAX_WIDTH = 120
 COUNT_LABEL_WIDTH = 12
 
 
+def format_top_count_and_value_lines(items: Any) -> tuple[str, str]:
+    pairs = list(items)
+    counts = "\n".join(f"{int(count):>{COUNT_LABEL_WIDTH},}" for value, count in pairs)
+    values = "\n".join(str(value) for value, count in pairs)
+    return counts, values
+
+
+def format_total_and_unique_count(counter: Counter[str]) -> str:
+    total_count = sum(counter.values())
+    unique_count = len(counter)
+    return f"{total_count:,}\n(unique: {unique_count:,})"
+
+
 def normalize_counter_value(value: Any) -> str:
     if isinstance(value, (str, int, float, bool)) or value is None:
         return str(value)
@@ -68,6 +81,43 @@ def print_stats_table(service: ServiceAnalyser, frame: pd.DataFrame):
                 ("unique_csps", f"{stats['unique_csps']:,}"),
             ],
             headers=["Metric", "Value"],
+            intfmt=","
+        )
+    )
+
+
+def print_versions_table(service: ServiceAnalyser, frame: pd.DataFrame, top_n: int = 5):
+    # Filter out pandas-missing values before string normalization (prevents literal "nan" rows)
+    raw_versions = frame["version"]
+    version_series = raw_versions[raw_versions.notna()].apply(normalize_counter_value)
+    known_versions = version_series[~version_series.str.lower().isin({"none", "nan", ""})]
+
+    print(f"\n[{service.name}] versions (top {top_n} per CSP):")
+    if known_versions.empty:
+        print("No versions available.")
+        return
+
+    table_rows: list[Any] = []
+    for csp in sorted(frame["csp"].dropna().unique()):
+        csp_raw_versions = frame.loc[frame["csp"] == csp, "version"]
+        csp_versions = csp_raw_versions[csp_raw_versions.notna()].apply(normalize_counter_value)
+        csp_versions = csp_versions[~csp_versions.str.lower().isin({"none", "nan", ""})]
+        if csp_versions.empty:
+            continue
+
+        top_counts, top_values = format_top_count_and_value_lines(csp_versions.value_counts().head(top_n).items())
+        table_rows.append((csp, top_counts, top_values))
+
+    total_counts, total_top_values = format_top_count_and_value_lines(known_versions.value_counts().head(top_n).items())
+    table_rows.append(SEPARATING_LINE)
+    table_rows.append(("TOTAL", total_counts, total_top_values))
+
+    print(
+        tabulate(
+            table_rows,
+            headers=["CSP", "Top counts", "Top versions"],
+            intfmt=",",
+            colalign=("left", "right", "left"),
         )
     )
 
@@ -87,21 +137,26 @@ def print_distribution_table(
 
         for csp in sorted(csp for csp, module_key in module_key_counters if module_key == key):
             counter = module_key_counters[(csp, key)]
-            top_values = "\n".join(f"{count:06}x: {value}" for value, count in counter.most_common(top_n))
-            table_rows.append((key if not key_printed else "", csp, len(counter), top_values))
+            top_counts, top_values = format_top_count_and_value_lines(counter.most_common(top_n))
+            table_rows.append(
+                (key if not key_printed else "", csp, format_total_and_unique_count(counter), top_counts, top_values))
             key_printed = True
 
         total_counter = total_key_counters[key]
-        total_top_values = "\n".join(f"{count:06}x: {value}" for value, count in total_counter.most_common(top_n))
-        table_rows.append((key if not key_printed else "", "TOTAL", len(total_counter), total_top_values))
+        total_counts, total_top_values = format_top_count_and_value_lines(total_counter.most_common(top_n))
+        table_rows.append(
+            (key if not key_printed else "", "TOTAL", format_total_and_unique_count(total_counter), total_counts,
+             total_top_values))
         table_rows.append(SEPARATING_LINE)
 
     print(f"\n[{service.name}] key value distribution:")
     print(
         tabulate(
             table_rows,
-            headers=["Key", "CSP", "Unique count", f"Top {top_n} values"],
-            maxcolwidths=[None, None, None, top_value_max_width],
+            headers=["Key", "CSP", "Count", f"Top {top_n} counts", f"Top {top_n} values"],
+            maxcolwidths=[None, None, None, None, top_value_max_width],
+            intfmt=",",
+            colalign=("left", "left", "right", "right", "left"),
         )
     )
 
@@ -150,5 +205,7 @@ def analyse_generic_service(
         out=output_dir / f"{analysis_prefix}_top_versions.png",
     )
 
+    # TODO Create version distribution (stacked?) plot per CSP as well (maybe group by major version here to not have too many bars?)
     print_stats_table(service, frame)
+    print_versions_table(service, frame, top_n=5)
     print_distribution_table(service, module_key_counters, total_key_counters, top_n=5)

@@ -7,12 +7,12 @@ from service_types import ServiceAnalyserProto
 from zgrab2_parser import BaseScanResponse, extract_value_by_path
 
 
-# TODO Check for all services all the CLI options to see if we can get more info
 class ServiceAnalyser(ServiceAnalyserProto):
     name: str
     display_name: str
     version_path: str | None = None
 
+    # TODO Also return if versions is vulnerable or not (e.g. based on some known CVEs)
     def get_version(self, module: BaseScanResponse) -> Any:
         if not self.version_path:
             return None
@@ -41,7 +41,6 @@ class MySqlService(ServiceAnalyser):
 class PostgresService(ServiceAnalyser):
     name = "postgres"
     display_name = "Postgres"
-    # TODO Maybe "result.supported_versions"? -> does need some parsing
     version_path = None
 
 
@@ -54,7 +53,7 @@ class MssqlService(ServiceAnalyser):
 
 class OracleService(ServiceAnalyser):
     name = "oracle"
-    display_name = "Oracle"
+    display_name = "Oracle Database"
     version_path = None
 
 
