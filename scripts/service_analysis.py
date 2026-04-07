@@ -6,12 +6,14 @@ import pandas as pd
 from tabulate import SEPARATING_LINE, tabulate
 
 from csp_loader import CspLookup
-from plotting import ensure_output_dir, save_series_bar_plot, save_stacked_bar_plot
+from plotting import ensure_output_dir, save_horizontal_stacked_100_plot, save_series_bar_plot, save_stacked_bar_plot
 from service_types import ServiceAnalyserProto as ServiceAnalyser
 from zgrab2_parser import iter_jsonl
 
 TOP_VALUE_MAX_WIDTH = 120
 COUNT_LABEL_WIDTH = 12
+VERSION_TOP_N = 10
+CSP_TOP_N_FOR_VERSION_PLOT = 25
 
 
 def format_top_count_and_value_lines(items: Any) -> tuple[str, str]:
@@ -161,6 +163,34 @@ def print_distribution_table(
     )
 
 
+def build_version_mix_by_csp_table(frame: pd.DataFrame, version_top_n: int = VERSION_TOP_N) -> pd.DataFrame:
+    raw_versions = frame["version"]
+    version_series = raw_versions[raw_versions.notna()].apply(normalize_counter_value)
+    known_versions = version_series[~version_series.str.lower().isin({"none", "nan", ""})]
+
+    if known_versions.empty:
+        return pd.DataFrame()
+
+    version_frame = frame.loc[known_versions.index, ["csp"]].copy()
+    version_frame = version_frame[version_frame["csp"].notna()]
+    if version_frame.empty:
+        return pd.DataFrame()
+
+    version_frame["version"] = known_versions.loc[version_frame.index]
+    top_versions = version_frame["version"].value_counts().head(version_top_n).index
+    version_frame["version_grouped"] = version_frame["version"].where(
+        version_frame["version"].isin(top_versions),
+        "Other",
+    )
+
+    plot_table = version_frame.groupby(["csp", "version_grouped"]).size().unstack(fill_value=0)
+    ordered_columns = [version for version in top_versions if version in plot_table.columns]
+    if "Other" in plot_table.columns:
+        ordered_columns.append("Other")
+
+    return plot_table.reindex(columns=ordered_columns, fill_value=0)
+
+
 def analyse_generic_service(
     service: ServiceAnalyser,
     jsonl_input_file: Path,
@@ -205,7 +235,16 @@ def analyse_generic_service(
         out=output_dir / f"{analysis_prefix}_top_versions.png",
     )
 
-    # TODO Create version distribution (stacked?) plot per CSP as well (maybe group by major version here to not have too many bars?)
+    version_mix_by_csp = build_version_mix_by_csp_table(frame, version_top_n=VERSION_TOP_N)
+    save_horizontal_stacked_100_plot(
+        version_mix_by_csp,
+        title=f"{service.display_name} version mix by CSP (100% stacked)",
+        xlabel="Share of IPs",
+        out=output_dir / f"{analysis_prefix}_version_mix_by_csp_100pct.png",
+        top_n=CSP_TOP_N_FOR_VERSION_PLOT,
+        legend_title="version",
+    )
+
     print_stats_table(service, frame)
     print_versions_table(service, frame, top_n=5)
     print_distribution_table(service, module_key_counters, total_key_counters, top_n=5)
