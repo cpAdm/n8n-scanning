@@ -32,6 +32,7 @@ export function createNotice(docUrl: string): INodeProperties {
 }
 
 export const ScannerProperties = {
+	// TODO Add note that output file will automatically be generated
 	commandOptions: {
 		displayName: 'Command Options',
 		name: 'cmdOptions',

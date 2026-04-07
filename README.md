@@ -11,7 +11,7 @@ Get a working container with n8n, the scanning tools, and the contact page:
 1. Install the following tools:
     - [Docker Engine](https://docs.docker.com/engine/install/)
 
-2. Clone this repro
+2. Clone this repository:
     ```bash
     git clone https://github.com/cpAdm/n8n-scanning.git 
     ```
@@ -97,3 +97,34 @@ Q1: ZMAP hangs before it actually starts scanning.
 
 A1: It might get stuck at getting the MAC address. Try specifying it yourselves with `--gateway-mac` (see
 `ip neigh show` for the right value)
+
+## Tips
+
+### Monitor network traffic throughput
+
+Find the right network interface with `ip -br link`, and then monitor the traffic on that interface with:
+
+```bash
+ifstat -i eth0 1 
+```
+
+## Analysis of scan results
+
+To quickly analyse the JSONL output of ZGrab2, you can use the bundled [jq](https://jqlang.org/) CLI tool.
+See [ZGrab2 schemas](https://github.com/zmap/zgrab2/tree/master/zgrab2_schemas/zgrab2) for the available fields to
+query.
+
+For example:
+
+```bash
+jq -r '.data.rdp.result.ntlm.os_version' data/2026-03-26T12-00-00-000Z-zgrab2-output.json | sort | uniq -c
+```
+
+Additionally, you can use the provided `scripts/main.py` script to get a quick overview per service and plots.
+
+```bash
+sudo apt-get install python3-pip                              # Install pip if not already installed
+python3 -m venv .venv                                         # Create a virtual environment
+./.venv/bin/python -m pip install -r scripts/requirements.txt # Install required Python packages in the virtual environment
+./.venv/bin/python scripts/main.py --help                     # Run the script with the --help flag to see usage instructions
+```
