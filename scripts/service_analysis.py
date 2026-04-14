@@ -6,6 +6,7 @@ import pandas as pd
 from tabulate import SEPARATING_LINE, tabulate
 
 from csp_loader import CspLookup
+from hilbert_prefix_plots import save_service_success_hilbert_plot
 from plotting import ensure_output_dir, save_horizontal_stacked_100_plot, save_series_bar_plot, save_stacked_bar_plot
 from service_types import ServiceAnalyserProto as ServiceAnalyser
 from zgrab2_parser import iter_jsonl
@@ -243,6 +244,18 @@ def analyse_generic_service(
         out=output_dir / f"{analysis_prefix}_version_mix_by_csp_100pct.png",
         top_n=CSP_TOP_N_FOR_VERSION_PLOT,
         legend_title="version",
+    )
+
+    success_frame = frame.loc[frame["status"] == "success", ["csp", "ip"]].dropna(subset=["csp", "ip"]).copy()
+    success_frame["ip"] = success_frame["ip"].astype(str)
+    save_service_success_hilbert_plot(
+        success_ips_by_csp={
+            str(csp): sorted(set(group["ip"]))
+            for csp, group in success_frame.groupby("csp", sort=True)
+        },
+        all_csp_names=sorted(csp_lookup.networks_by_csp),
+        service_name=service.display_name,
+        out=output_dir / f"{analysis_prefix}_success_hilbert.png",
     )
 
     print_stats_table(service, frame)

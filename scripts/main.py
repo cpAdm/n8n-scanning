@@ -4,6 +4,7 @@ from pathlib import Path
 from tabulate import tabulate
 
 from csp_loader import CspLookup, load_csp_entries_for_date
+from hilbert_prefix_plots import save_combined_hilbert_prefix_plot
 from plotting import ensure_output_dir
 from services import SERVICE_ANALYSERS
 from zgrab2_parser import iter_jsonl
@@ -51,6 +52,11 @@ def main() -> int:
     csp_rows = [(csp, len(networks), sum(net.num_addresses for net in networks)) for csp, networks in
                 csp_lookup.networks_by_csp.items()]
     print(tabulate(csp_rows, headers=["CSP", "Number of prefixes", "Total IPv4 addresses"], intfmt=","))
+
+    hilbert_output = output_root / "all-csps-hilbert-order.png"
+    ensure_output_dir(hilbert_output.parent)
+    print(f"\nRendering combined CSP Hilbert plot -> {hilbert_output.relative_to(output_root)}")
+    save_combined_hilbert_prefix_plot(csp_lookup.networks_by_csp, hilbert_output)
 
     print(f'\nProcessing {len(args.input_files)} input files...')
     for input_file in args.input_files:
