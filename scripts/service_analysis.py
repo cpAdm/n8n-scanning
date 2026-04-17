@@ -9,6 +9,7 @@ from csp_loader import CspLookup
 from hilbert_prefix_plots import save_service_success_hilbert_plot
 from plotting import ensure_output_dir, save_horizontal_stacked_100_plot, save_series_bar_plot, save_stacked_bar_plot
 from service_types import ServiceAnalyserProto as ServiceAnalyser
+from vuln_lookup import NvdVulnerabilityLookup, MATCH_TIERS
 from zgrab2_parser import iter_jsonl
 
 TOP_VALUE_MAX_WIDTH = 120
@@ -42,6 +43,7 @@ def collect_service_rows_and_counters(
     jsonl_input_file: Path | str,
     service: ServiceAnalyser,
     csp_lookup: CspLookup,
+    vuln_lookup: NvdVulnerabilityLookup,
 ) -> tuple[list[dict[str, Any]], dict[tuple[str, str], Counter[str]], dict[str, Counter[str]]]:
     rows: list[dict[str, Any]] = []
     module_key_counters: dict[tuple[str, str], Counter[str]] = {}
@@ -49,15 +51,21 @@ def collect_service_rows_and_counters(
 
     for obj in iter_jsonl(Path(jsonl_input_file)):
         ip = obj["ip"]
-        module = obj["data"].get(service.name)
+        module = obj["data"][service.name]
+        result = module.get('result')
         csp = csp_lookup.find_csp(ip)
+        version = service.get_version(result or {})
+        version_text = version.strip() if version else None
+        vuln_result = vuln_lookup.lookup(service, version_text) if version_text else None
+
         rows.append(
             {
                 "ip": ip,
                 "csp": csp,
                 "status": module.get("status"),
-                "has_result": module.get("result") is not None,
-                "version": service.get_version(module),
+                "has_result": bool(result),
+                "version": version_text,
+                "vuln_result": vuln_result,
             }
         )
 
@@ -192,11 +200,118 @@ def build_version_mix_by_csp_table(frame: pd.DataFrame, version_top_n: int = VER
     return plot_table.reindex(columns=ordered_columns, fill_value=0)
 
 
+def print_vulnerabilities_table(
+    service: ServiceAnalyser,
+    frame: pd.DataFrame,
+    vuln_lookup: NvdVulnerabilityLookup,
+    top_n: int,
+):
+    enriched = frame[frame["vuln_result"].notna()].copy()
+
+    def _tier_cve_ids(result: Any) -> list[str]:
+        conf = result.confidence
+        if conf in MATCH_TIERS:
+            return list(result.cve_ids_by_confidence.get(conf, []))
+        return []
+
+    enriched["vuln_confidence"] = enriched["vuln_result"].map(lambda result: result.confidence)
+    enriched["vuln_cve_ids"] = enriched["vuln_result"].map(_tier_cve_ids)
+    enriched["vuln_cve_count"] = enriched["vuln_cve_ids"].map(len)
+    enriched = enriched[enriched["vuln_cve_count"] > 0].copy()
+    print(f"\n[{service.name}] potential vulnerabilities by version (top {top_n}):")
+    if enriched.empty:
+        print("No CVE matches found for known versions.")
+        return
+
+    enriched["vuln_top_cves"] = enriched["vuln_cve_ids"].map(lambda cve_ids: ", ".join(cve_ids[:5]))
+
+    enriched["vuln_severity_counts"] = enriched["vuln_cve_ids"].map(
+        lambda cve_ids: vuln_lookup.severity_counts_for_cves(service, cve_ids)
+    )
+    enriched["vuln_high"] = enriched["vuln_severity_counts"].map(lambda counts: int(counts.get("high", 0)))
+    enriched["vuln_medium"] = enriched["vuln_severity_counts"].map(lambda counts: int(counts.get("medium", 0)))
+    enriched["vuln_low"] = enriched["vuln_severity_counts"].map(lambda counts: int(counts.get("low", 0)))
+
+    for confidence in MATCH_TIERS:
+        subset = enriched[enriched["vuln_confidence"] == confidence]
+        if subset.empty:
+            continue
+
+        summary = (
+            subset.groupby(["version"], dropna=False)
+            .agg(
+                ips=("ip", "count"),
+                max_cve_count=("vuln_cve_count", "max"),
+                max_high=("vuln_high", "max"),
+                max_medium=("vuln_medium", "max"),
+                max_low=("vuln_low", "max"),
+                sample_cves=("vuln_top_cves", "first"),
+            )
+            .sort_values(["ips", "max_cve_count"], ascending=False)
+            .head(top_n)
+            .reset_index()
+        )
+
+        print(f"\nConfidence: {confidence} (top {top_n})")
+        print(
+            tabulate(
+                summary,
+                headers=["version", "ips", "CVEs", "high", "medium", "low", "sample CVEs"],
+                showindex=False,
+            )
+        )
+
+    externally_exploitable = enriched.copy()
+    externally_exploitable["vuln_net_no_priv_ids"] = externally_exploitable["vuln_cve_ids"].map(
+        lambda cve_ids: vuln_lookup.network_no_privilege_cve_ids_for_cves(service, cve_ids)
+    )
+    externally_exploitable["vuln_net_no_priv_count"] = externally_exploitable["vuln_net_no_priv_ids"].map(len)
+    externally_exploitable = externally_exploitable[externally_exploitable["vuln_net_no_priv_count"] > 0].copy()
+
+    print(
+        f"\n[{service.name}] network-exploitable (no privileges required) vulnerabilities by version (top {top_n}):"
+    )
+    if externally_exploitable.empty:
+        print("No network/no-privilege CVE matches found for known versions.")
+        return
+
+    externally_exploitable["vuln_net_no_priv_top_cves"] = externally_exploitable["vuln_net_no_priv_ids"].map(
+        lambda cve_ids: ", ".join(cve_ids[:5])
+    )
+
+    for confidence in MATCH_TIERS:
+        subset = externally_exploitable[externally_exploitable["vuln_confidence"] == confidence]
+        if subset.empty:
+            continue
+
+        summary = (
+            subset.groupby(["version"], dropna=False)
+            .agg(
+                ips=("ip", "count"),
+                max_cve_count=("vuln_net_no_priv_count", "max"),
+                sample_cves=("vuln_net_no_priv_top_cves", "first"),
+            )
+            .sort_values(["ips", "max_cve_count"], ascending=False)
+            .head(top_n)
+            .reset_index()
+        )
+
+        print(f"\nConfidence: {confidence} (top {top_n})")
+        print(
+            tabulate(
+                summary,
+                headers=["version", "ips", "CVEs", "sample CVEs"],
+                showindex=False,
+            )
+        )
+
+
 def analyse_generic_service(
     service: ServiceAnalyser,
     jsonl_input_file: Path,
     csp_lookup: CspLookup,
     output_root: Path,
+    vuln_lookup: NvdVulnerabilityLookup,
 ):
     output_dir = ensure_output_dir(Path(output_root))
     analysis_prefix = f"{Path(jsonl_input_file).stem}_{service.name}_analysis"
@@ -205,6 +320,7 @@ def analyse_generic_service(
         jsonl_input_file=jsonl_input_file,
         service=service,
         csp_lookup=csp_lookup,
+        vuln_lookup=vuln_lookup,
     )
 
     frame = pd.DataFrame(rows)
@@ -260,4 +376,5 @@ def analyse_generic_service(
 
     print_stats_table(service, frame)
     print_versions_table(service, frame, top_n=5)
+    print_vulnerabilities_table(service, frame, vuln_lookup=vuln_lookup, top_n=5)
     print_distribution_table(service, module_key_counters, total_key_counters, top_n=5)

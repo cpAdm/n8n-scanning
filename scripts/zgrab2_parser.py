@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Generator, Literal, NotRequired, Required, TypedDict, Any
+from typing import Any, Generator, Literal, NotRequired, Required, TypedDict
 
 type StatusValue = Literal[
     "success",
@@ -21,7 +21,7 @@ class BaseScanResponse(TypedDict, total=False):
     port: Required[int]
     timestamp: Required[str]
     # See https://github.com/zmap/zgrab2/tree/master/zgrab2_schemas/zgrab2 for more accurate types based on the service
-    result: NotRequired[dict[str, Any]]
+    result: NotRequired[dict[str, Any] | None]
     error: NotRequired[str]
 
 
@@ -37,14 +37,3 @@ def iter_jsonl(path: Path | str) -> Generator[ZGrab2Response, None, None]:
         for line in handle:
             if stripped_line := line.strip():
                 yield json.loads(stripped_line)
-
-
-def extract_value_by_path(obj: BaseScanResponse, dotted_path: str) -> Any:
-    current: Any = obj
-    for segment in dotted_path.split("."):
-        if not isinstance(current, dict):
-            return None
-        current = current.get(segment)
-        if current is None:
-            return None
-    return current

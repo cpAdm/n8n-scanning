@@ -120,8 +120,8 @@ For example:
 jq -r '.data.rdp.result.ntlm.os_version' data/2026-03-26T12-00-00-000Z-zgrab2-output.json | sort | uniq -c
 ```
 
-Additionally, you can use the provided `scripts/main.py` script to get a quick overview per service and (Hilbert prefix)
-plots.
+Additionally, you can use the provided `scripts/main.py` script to get a quick overview per service, (Hilbert prefix)
+plots, and CVE enrichment by looking up discovered versions against the NVD API.
 
 ```bash
 sudo apt-get install python3-pip                              # Install pip if not already installed

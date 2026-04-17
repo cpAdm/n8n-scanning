@@ -7,6 +7,7 @@ from csp_loader import CspLookup, load_csp_entries_for_date
 from hilbert_prefix_plots import save_combined_hilbert_prefix_plot
 from plotting import ensure_output_dir
 from services import SERVICE_ANALYSERS
+from vuln_lookup import NvdVulnerabilityLookup
 from zgrab2_parser import iter_jsonl
 
 OUTPUT_ROOT = Path("data") / "analysis"
@@ -35,6 +36,11 @@ def parse_args():
         default=OUTPUT_ROOT,
         help=f"Directory where analysis outputs are written (default: {OUTPUT_ROOT})",
     )
+    parser.add_argument(
+        "--nvd-api-key",
+        dest="nvd_api_key",
+        help="Optional NVD API key. Request one at https://nvd.nist.gov/developers/request-an-api-key . If omitted, unauthenticated NVD requests are throttled to one every 5 seconds.",
+    )
     return parser.parse_args()
 
 
@@ -44,6 +50,7 @@ def main() -> int:
     entries, source = load_csp_entries_for_date(args.scan_date)
     csp_lookup = CspLookup.from_entries(entries)
     output_root = ensure_output_dir(args.output_root)
+    vuln_lookup = NvdVulnerabilityLookup(nvd_api_key=args.nvd_api_key)
     implemented_services = {service.name for service in SERVICE_ANALYSERS}
 
     print(f"Loaded CSP entries from: {source}")
@@ -72,7 +79,7 @@ def main() -> int:
         for service in SERVICE_ANALYSERS:
             if service.name in detected_services:
                 print(f"\n\nAnalysing '{service.display_name}' service on input: {input_file}")
-                service.analyse(input_file, csp_lookup, output_root)
+                service.analyse(input_file, csp_lookup, output_root, vuln_lookup)
 
     return 0
 
