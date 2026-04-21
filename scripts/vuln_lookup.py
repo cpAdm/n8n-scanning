@@ -3,9 +3,10 @@ import re
 import time
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict, cast
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+
+import requests
 
 from service_types import ServiceAnalyserProto
 from utils import MemoCache
@@ -372,17 +373,16 @@ class NvdVulnerabilityLookup:
                     headers["apiKey"] = self.nvd_api_key
 
                 print(f"Fetching CVEs with query params: {query_params}, start index: {start_index}")
-                request = Request(
-                    f"{NVD_API_URL}?{urlencode({
-                        **query_params,
-                        "resultsPerPage": NVD_RESULTS_PER_PAGE,
-                        "startIndex": start_index,
-                    })}",
-                    headers=headers,
-                )
+                url = f"{NVD_API_URL}?{urlencode({
+                    **query_params,
+                    "resultsPerPage": NVD_RESULTS_PER_PAGE,
+                    "startIndex": start_index,
+                })}"
 
-                with urlopen(request) as response:
-                    payload: NvdApiResponse = json.loads(response.read().decode("utf-8"))
+                with requests.get(url, headers=headers, stream=True, timeout=30) as response:
+                    response.raise_for_status()
+                    response.raw.decode_content = True
+                    payload: NvdApiResponse = json.load(response.raw)
 
                 if not self.nvd_api_key:
                     # Keep within the public no-key rate limit budget.
@@ -400,13 +400,13 @@ class NvdVulnerabilityLookup:
                     cve = item.get("cve")
                     if not cve:
                         continue
-                    all_cves.append(
-                        {
-                            "id": cve["id"],
-                            "configurations": cve.get("configurations", []),
-                            "metrics": cve.get("metrics", {}),
-                        }
-                    )
+                    metrics = cast(NvdMetrics, cve.get("metrics", {}))
+                    cve_record: CveRecord = {
+                        "id": cve["id"],
+                        "configurations": cve.get("configurations", []),
+                        "metrics": metrics,
+                    }
+                    all_cves.append(cve_record)
 
                 start_index += len(page_items)
 

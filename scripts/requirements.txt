@@ -1,4 +1,5 @@
 pandas==3.0.1
+requests==2.33.1
 # For creating plots
 matplotlib==3.10.8
 # For outputting (markdown) tables
