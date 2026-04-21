@@ -228,6 +228,7 @@ def print_vulnerabilities_table(
     enriched["vuln_severity_counts"] = enriched["vuln_cve_ids"].map(
         lambda cve_ids: vuln_lookup.severity_counts_for_cves(service, cve_ids)
     )
+    enriched["vuln_critical"] = enriched["vuln_severity_counts"].map(lambda counts: int(counts.get("critical", 0)))
     enriched["vuln_high"] = enriched["vuln_severity_counts"].map(lambda counts: int(counts.get("high", 0)))
     enriched["vuln_medium"] = enriched["vuln_severity_counts"].map(lambda counts: int(counts.get("medium", 0)))
     enriched["vuln_low"] = enriched["vuln_severity_counts"].map(lambda counts: int(counts.get("low", 0)))
@@ -242,6 +243,7 @@ def print_vulnerabilities_table(
             .agg(
                 ips=("ip", "count"),
                 max_cve_count=("vuln_cve_count", "max"),
+                max_critical=("vuln_critical", "max"),
                 max_high=("vuln_high", "max"),
                 max_medium=("vuln_medium", "max"),
                 max_low=("vuln_low", "max"),
@@ -256,7 +258,7 @@ def print_vulnerabilities_table(
         print(
             tabulate(
                 summary,
-                headers=["version", "ips", "CVEs", "high", "medium", "low", "sample CVEs"],
+                headers=["version", "ips", "CVEs", "critical", "high", "medium", "low", "sample CVEs"],
                 showindex=False,
             )
         )

@@ -16,9 +16,9 @@ NVD_RESULTS_PER_PAGE = 2000
 
 MatchConfidence = Literal["exact", "range", "broad", "none"]
 MatchTier = Literal["exact", "range", "broad"]
-SeverityLevel = Literal["high", "medium", "low"]
+SeverityLevel = Literal["critical", "high", "medium", "low"]
 MATCH_TIERS: tuple[MatchTier, ...] = ("exact", "range", "broad")
-SEVERITY_LEVELS: tuple[SeverityLevel, ...] = ("high", "medium", "low")
+SEVERITY_LEVELS: tuple[SeverityLevel, ...] = ("critical", "high", "medium", "low")
 MATCH_CONFIDENCE_RANK: dict[MatchConfidence, int] = {
     "none": 0,
     "broad": 1,
@@ -211,6 +211,8 @@ def _match_single_cve(cve: CveRecord, version: str, cpe_prefixes: tuple[str, ...
 
 
 def _severity_from_base_score(base_score: float) -> SeverityLevel:
+    if base_score >= 9.0:
+        return "critical"
     if base_score >= 7.0:
         return "high"
     if base_score >= 4.0:
