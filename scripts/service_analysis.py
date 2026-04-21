@@ -121,7 +121,7 @@ def print_versions_table(service: ServiceAnalyser, frame: pd.DataFrame, top_n: i
 
     total_counts, total_top_values = format_top_count_and_value_lines(known_versions.value_counts().head(top_n).items())
     table_rows.append(SEPARATING_LINE)
-    table_rows.append(("TOTAL", total_counts, total_top_values))
+    table_rows.append(("AGGREGATED", total_counts, total_top_values))
 
     print(
         tabulate(
@@ -156,7 +156,7 @@ def print_distribution_table(
         total_counter = total_key_counters[key]
         total_counts, total_top_values = format_top_count_and_value_lines(total_counter.most_common(top_n))
         table_rows.append(
-            (key if not key_printed else "", "TOTAL", format_total_and_unique_count(total_counter), total_counts,
+            (key if not key_printed else "", "AGGREGATED", format_total_and_unique_count(total_counter), total_counts,
              total_top_values))
         table_rows.append(SEPARATING_LINE)
 

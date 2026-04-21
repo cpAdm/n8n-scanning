@@ -24,8 +24,6 @@ class ServiceAnalyser(ServiceAnalyserProto):
         analyse_generic_service(self, jsonl_input_file, csp_lookup, output_root, vuln_lookup)
 
 
-# TODO Validate nvd_cpe_prefixes
-
 # TODO Also interesting:
 #  result.build_info.build_environment.target_os
 #  Read databases: jq -r '.data.mongodb.result.database_info // empty' data/2026-03-26T15-33-23-646Z-zgrab2-output.json | sort -u
@@ -93,20 +91,22 @@ class MemcachedService(ServiceAnalyser):
 class RdpService(ServiceAnalyser):
     name = "rdp"
     display_name = "RDP"
+    # ntlm.os_version below only returns 3-part version, not full 4-part which we need to match to CPEs with confidence
     nvd_cpe_prefixes = ()
 
     def get_version(self, result):
-        return result.get("ntlm", {}).get("os_version")
+        return result.get("ntlm", {}).get("os_version") # E.g. 10.0.20348.0, 6.3.9600.0
 
 
 # TODO Also see other interesting fields of result.server_id
 class SshService(ServiceAnalyser):
     name = "ssh"
     display_name = "SSH"
-    nvd_cpe_prefixes = ("cpe:2.3:a:openbsd:openssh:",)
+    # We don't know the exact SSH server version that is used
+    nvd_cpe_prefixes = ()
 
     def get_version(self, result):
-        return result.get("server_id", {}).get("version")  # E.g. 1.99/2.0/2.1
+        return result.get("server_id", {}).get("version")  # E.g. 1.99, 2.0, 2.1
 
 
 SERVICE_ANALYSERS: list[ServiceAnalyser] = [
