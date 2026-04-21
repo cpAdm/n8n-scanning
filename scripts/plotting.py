@@ -24,6 +24,7 @@ UNKNOWN_VERSION_COLOR = "#9e9e9e"
 OTHER_VERSION_COLOR = "#c7c7c7"
 # See: https://matplotlib.org/stable/users/explain/colors/colormaps.html#sequential
 VERSION_FAMILY_CMAPS = ["Blues", "Greens", "Purples", "Oranges", "Reds", "Greys", "YlGnBu", "PuRd"]
+SCIENTIFIC_NOTATION_THRESHOLD = 1_000_000_000_000_000
 
 
 def ensure_output_dir(path: Path | str) -> Path:
@@ -32,13 +33,22 @@ def ensure_output_dir(path: Path | str) -> Path:
     return output_dir
 
 
-def _format_compact_number(value: float, _pos: int) -> str:
+def format_compact_number(value: float, *_args) -> str:
     abs_value = abs(value)
-    for threshold, suffix in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
-        if abs_value >= threshold:
-            scaled = value / threshold
-            formatted = f"{scaled:.1f}".rstrip("0").rstrip(".")
-            return f"{formatted}{suffix}"
+    if abs_value >= SCIENTIFIC_NOTATION_THRESHOLD:
+        return f"{value:.3e}"
+
+    suffixes = ("", "K", "M", "B", "T")
+    if abs_value >= 1_000:
+        magnitude = 0
+        scaled_abs = float(abs_value)
+        while scaled_abs >= 1000 and magnitude < len(suffixes) - 1:
+            scaled_abs /= 1000
+            magnitude += 1
+
+        scaled = value / (1000 ** magnitude)
+        formatted = f"{scaled:.1f}".rstrip("0").rstrip(".")
+        return f"{formatted}{suffixes[magnitude]}"
 
     if float(value).is_integer():
         return str(int(value))
@@ -113,8 +123,8 @@ def save_series_bar_plot(
     plt.figure(figsize=(10, 5))
     bar_colors = [_status_to_color(idx) for idx in series.index] if use_status_colors else None
     series.plot(kind="bar", color=bar_colors)
-    plt.gca().yaxis.set_major_formatter(FuncFormatter(_format_compact_number))
-    plt.title(title)
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(format_compact_number))
+    # plt.title(title)
     plt.ylabel(ylabel)
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
@@ -142,8 +152,8 @@ def save_stacked_bar_plot(
     plt.figure(figsize=(12, 6))
     status_colors = [_status_to_color(col) for col in plot_table.columns]
     plot_table.plot(kind="bar", stacked=True, ax=plt.gca(), color=status_colors)
-    plt.gca().yaxis.set_major_formatter(FuncFormatter(_format_compact_number))
-    plt.title(title)
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(format_compact_number))
+    # plt.title(title)
     plt.ylabel(ylabel)
     plt.xticks(rotation=45, ha="right")
     plt.legend(title="status", bbox_to_anchor=(1.02, 1), loc="upper left")
@@ -177,7 +187,7 @@ def save_horizontal_stacked_100_plot(
     version_colors = _build_version_family_colors(list(plot_table.columns))
     plot_table.plot(kind="barh", stacked=True, ax=plt.gca(), color=version_colors)
     plt.gca().xaxis.set_major_formatter(PercentFormatter(xmax=100))
-    plt.title(title)
+    # plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel("")
     plt.yticks(rotation=0)

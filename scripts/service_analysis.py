@@ -369,7 +369,7 @@ def analyse_generic_service(
             str(csp): sorted(set(group["ip"]))
             for csp, group in success_frame.groupby("csp", sort=True)
         },
-        all_csp_names=sorted(csp_lookup.networks_by_csp),
+        all_csp_names=sorted(csp_lookup.networks_by_csp_v4),
         service_name=service.display_name,
         out=output_dir / f"{analysis_prefix}_success_hilbert.png",
     )
