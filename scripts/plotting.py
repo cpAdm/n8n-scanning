@@ -1,11 +1,8 @@
-import re
-from itertools import cycle
 from pathlib import Path
 from typing import Any, cast
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.colors import to_hex
 from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter, PercentFormatter
 
@@ -22,10 +19,30 @@ STATUS_COLOR_MAP: dict[StatusValue, str] = {
     "unknown-error": "#7f7f7f",
 }
 UNKNOWN_STATUS_COLOR = "#1f77b4"
-UNKNOWN_VERSION_COLOR = "#9e9e9e"
+VERSION_RANK_COLORS = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+    "#aec7e8",
+    "#ffbb78",
+    "#98df8a",
+    "#ff9896",
+    "#c5b0d5",
+    "#c49c94",
+    "#f7b6d2",
+    "#c7c7c7",
+    "#dbdb8d",
+    "#9edae5",
+]
 OTHER_VERSION_COLOR = "#c7c7c7"
-# See: https://matplotlib.org/stable/users/explain/colors/colormaps.html#sequential
-VERSION_FAMILY_CMAPS = ["Blues", "Greens", "Purples", "Oranges", "Reds", "Greys", "YlGnBu", "PuRd"]
+
 SCIENTIFIC_NOTATION_THRESHOLD = 1_000_000_000_000_000
 
 
@@ -36,6 +53,7 @@ def ensure_output_dir(path: Path | str) -> Path:
 
 
 def format_compact_number(value: float, *_args) -> str:
+    """Formats a number in a compact form with suffixes (K, M, B, T) and scientific notation for very large numbers."""
     abs_value = abs(value)
     if abs_value >= SCIENTIFIC_NOTATION_THRESHOLD:
         return f"{value:.3e}"
@@ -62,53 +80,8 @@ def _status_to_color(label: object) -> str:
     return STATUS_COLOR_MAP.get(str(label).strip().lower(), UNKNOWN_STATUS_COLOR)
 
 
-def _extract_major_version_family(label: object) -> str:
-    text = str(label).strip()
-    if text.lower() == "other":
-        return "other"
-
-    match = re.match(r"^(\d+)", text)
-    return match.group(1) if match else "unknown"
-
-
-def _version_family_sort_key(family: str) -> tuple[int, int | str]:
-    if family == "other":
-        return 2, "other"
-    if family == "unknown":
-        return 1, "unknown"
-    return 0, int(family)
-
-
-def build_version_family_colors(labels: list[object]) -> list[str]:
-    indices_by_family: dict[str, list[int]] = {}
-    for idx, label in enumerate(labels):
-        family = _extract_major_version_family(label)
-        indices_by_family.setdefault(family, []).append(idx)
-
-    colors: list[str] = [UNKNOWN_VERSION_COLOR] * len(labels)
-    cmap_cycle = cycle(VERSION_FAMILY_CMAPS)
-    for family in sorted(indices_by_family, key=_version_family_sort_key):
-        indices = indices_by_family[family]
-
-        if family == "other":
-            for idx in indices:
-                colors[idx] = OTHER_VERSION_COLOR
-            continue
-
-        if family == "unknown":
-            for idx in indices:
-                colors[idx] = UNKNOWN_VERSION_COLOR
-            continue
-
-        cmap_name = next(cmap_cycle)
-        cmap = plt.get_cmap(cmap_name)
-        steps = max(len(indices) - 1, 1)
-
-        for shade_pos, idx in enumerate(indices):
-            shade = 0.45 + 0.45 * (shade_pos / steps)
-            colors[idx] = to_hex(cmap(shade))
-
-    return colors
+def build_version_rank_colors(labels: list[object]) -> list[str]:
+    return [VERSION_RANK_COLORS[idx % len(VERSION_RANK_COLORS)] for idx, _label in enumerate(labels)]
 
 
 def save_series_bar_plot(
@@ -175,7 +148,7 @@ def save_horizontal_stacked_100_plot(
     out: Path,
     top_n: int,
     legend_title: str,
-    bar_colors: list[str] | None = None,
+    bar_colors: list[str],
     legend_handles: list[Patch] | None = None,
     bar_hatches: list[str] | None = None,
     annotate_values: bool = True,
@@ -211,9 +184,8 @@ def save_horizontal_stacked_100_plot(
     plot_table = plot_table.div(totals, axis=0).fillna(0.0) * 100.0
 
     plt.figure(figsize=(12, 6))
-    version_colors = bar_colors or build_version_family_colors(list(plot_table.columns))
     ax = plt.gca()
-    plot_table.plot(kind="barh", stacked=True, ax=ax, color=version_colors)
+    plot_table.plot(kind="barh", stacked=True, ax=ax, color=bar_colors)
     ax.invert_yaxis()
     if bar_hatches is not None:
         for container, hatch in zip(ax.containers, bar_hatches):

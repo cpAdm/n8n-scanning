@@ -10,7 +10,7 @@ from tabulate import SEPARATING_LINE, tabulate
 from csp_loader import CspLookup
 from hilbert_prefix_plots import save_service_success_hilbert_plot
 from plotting import (
-    build_version_family_colors,
+    build_version_rank_colors,
     ensure_output_dir,
     OTHER_VERSION_COLOR,
     STATUS_COLOR_MAP,
@@ -23,13 +23,6 @@ from vuln_lookup import NvdVulnerabilityLookup, MATCH_TIERS, SEVERITY_LEVELS
 from zgrab2_parser import iter_jsonl
 
 VERSION_TOP_N = 20
-UNKNOWN_SEVERITY_COLOR = "#7f7f7f"
-SEVERITY_COLOR_MAP = {
-    "critical": "#d62728",
-    "high": "#ff7f0e",
-    "medium": "#bcbd22",
-    "low": "#2ca02c",
-}
 SEVERITY_SHORT_LABEL_MAP = {
     "critical": "C",
     "high": "H",
@@ -197,6 +190,7 @@ def build_version_mix_by_csp_table(
     frame: pd.DataFrame,
     service: ServiceAnalyser,
     vuln_lookup: NvdVulnerabilityLookup,
+    ranked_top_versions: list[object] | None = None,
     version_top_n: int = VERSION_TOP_N,
 ) -> pd.DataFrame:
     raw_versions = frame["version"]
@@ -212,7 +206,9 @@ def build_version_mix_by_csp_table(
         return pd.DataFrame()
 
     version_frame["version"] = known_versions.loc[version_frame.index]
-    top_versions = version_frame["version"].value_counts().head(version_top_n).index
+    top_versions = list(ranked_top_versions) if ranked_top_versions is not None else list(
+        version_frame["version"].value_counts().head(version_top_n).index
+    )
     version_frame["version_grouped"] = version_frame["version"].where(version_frame["version"].isin(top_versions), pd.NA)
     other_mask = version_frame["version_grouped"].isna()
     if other_mask.any():
@@ -227,34 +223,6 @@ def build_version_mix_by_csp_table(
         for bucket in (_other_version_bucket_label(severity) for severity in OTHER_VERSION_SEVERITY_ORDER)
         if bucket in plot_table.columns and bucket not in ordered_columns
     )
-
-    return plot_table.reindex(columns=ordered_columns, fill_value=0)
-
-
-def build_version_counts_by_csp_table(frame: pd.DataFrame, version_top_n: int = VERSION_TOP_N) -> pd.DataFrame:
-    raw_versions = frame["version"]
-    version_series = raw_versions[raw_versions.notna()].apply(normalize_counter_value)
-    known_versions = version_series[~version_series.str.lower().isin({"none", "nan", ""})]
-
-    if known_versions.empty:
-        return pd.DataFrame()
-
-    version_frame = frame.loc[known_versions.index, ["csp"]].copy()
-    version_frame = version_frame[version_frame["csp"].notna()]
-    if version_frame.empty:
-        return pd.DataFrame()
-
-    version_frame["version"] = known_versions.loc[version_frame.index]
-    top_versions = version_frame["version"].value_counts().head(version_top_n).index
-    version_frame["version_grouped"] = version_frame["version"].where(
-        version_frame["version"].isin(top_versions),
-        "Other",
-    )
-
-    plot_table = version_frame.groupby(["csp", "version_grouped"]).size().unstack(fill_value=0)
-    ordered_columns = [version for version in top_versions if version in plot_table.columns]
-    if "Other" in plot_table.columns and "Other" not in ordered_columns:
-        ordered_columns.append("Other")
 
     return plot_table.reindex(columns=ordered_columns, fill_value=0)
 
@@ -282,7 +250,7 @@ def _version_exact_range_cve_ids(result: Any) -> list[str]:
 
 
 def _top_version_bar_colors(versions: pd.Series) -> list[str]:
-    return build_version_family_colors(list(versions))
+    return build_version_rank_colors(list(versions))
 
 
 def _version_severity_labels(
@@ -355,10 +323,6 @@ def _other_bucket_severity(column: object) -> str | None:
     return text.split("::", 1)[1]
 
 
-def _version_bar_hatches(severities: list[str | None]) -> list[str]:
-    return [SEVERITY_HATCH_MAP.get(severity, "") for severity in severities]
-
-
 def _top_version_severity_markers(severities: list[str | None]) -> list[str | None]:
     return [SEVERITY_SHORT_LABEL_MAP.get(severity) for severity in severities]
 
@@ -387,7 +351,7 @@ def _version_severity_legend_handles() -> list[Patch]:
 
 
 def _version_color_legend_handles(versions: list[object]) -> list[Patch]:
-    colors = build_version_family_colors(versions)
+    colors = build_version_rank_colors(versions)
     return [Patch(facecolor=color, edgecolor="black", label=str(version)) for version, color in zip(versions, colors)]
 
 
@@ -399,15 +363,14 @@ def _version_mix_version_legend_handles(columns: list[object]) -> list[Patch]:
     return handles
 
 
-def _version_mix_bar_colors(columns: list[object]) -> list[str]:
-    top_versions = [column for column in columns if not _is_other_version_bucket(column)]
-    top_version_colors = dict(zip(top_versions, build_version_family_colors(top_versions)))
+def _version_mix_bar_colors(columns: list[object], ranked_top_versions: list[object]) -> list[str]:
+    top_version_colors = dict(zip(ranked_top_versions, build_version_rank_colors(ranked_top_versions)))
     colors: list[str] = []
     for column in columns:
         if _is_other_version_bucket(column):
             colors.append(OTHER_VERSION_COLOR)
         else:
-            colors.append(top_version_colors[column])
+            colors.append(top_version_colors.get(column, OTHER_VERSION_COLOR))
     return colors
 
 
@@ -585,6 +548,7 @@ def analyse_generic_service(
     )
 
     top_versions = frame["version"].dropna().value_counts().head(20)
+    top_version_ranked = list(top_versions.index)
     top_version_severities = _version_severity_labels(frame, top_versions.index, service, vuln_lookup)
     save_series_bar_plot(
         top_versions,
@@ -597,7 +561,13 @@ def analyse_generic_service(
         legend_title="severity",
     )
 
-    version_mix_by_csp = build_version_mix_by_csp_table(frame, service=service, vuln_lookup=vuln_lookup, version_top_n=VERSION_TOP_N)
+    version_mix_by_csp = build_version_mix_by_csp_table(
+        frame,
+        service=service,
+        vuln_lookup=vuln_lookup,
+        ranked_top_versions=top_version_ranked,
+        version_top_n=VERSION_TOP_N,
+    )
     version_mix_columns = list(version_mix_by_csp.columns)
     save_horizontal_stacked_100_plot(
         version_mix_by_csp,
@@ -605,7 +575,7 @@ def analyse_generic_service(
         out=output_dir / f"{analysis_prefix}_version_mix_by_csp_100pct.png",
         top_n=VERSION_TOP_N,
         legend_title="version",
-        bar_colors=_version_mix_bar_colors(version_mix_columns),
+        bar_colors=_version_mix_bar_colors(version_mix_columns, top_version_ranked),
         legend_handles=_version_mix_version_legend_handles(version_mix_columns),
         legend_fontsize=7,
         bar_hatches=_version_mix_bar_hatches(frame, version_mix_columns, service, vuln_lookup),
