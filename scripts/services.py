@@ -56,7 +56,7 @@ class PostgresService(ServiceAnalyser):
 class MssqlService(ServiceAnalyser):
     name = "mssql"
     display_name = "MSSQL"
-    nvd_cpe_prefixes = ("cpe:2.3:a:microsoft:sql_server:",)
+    nvd_cpe_prefixes = ()
 
     def get_version(self, result):
         return result.get("version")
