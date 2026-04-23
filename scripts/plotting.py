@@ -1,6 +1,7 @@
 import re
 from itertools import cycle
 from pathlib import Path
+from typing import Any, cast
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -61,15 +62,6 @@ def _status_to_color(label: object) -> str:
     return STATUS_COLOR_MAP.get(str(label).strip().lower(), UNKNOWN_STATUS_COLOR)
 
 
-def _lookup_color(label: object, color_map: dict[str, str] | None) -> str | None:
-    if color_map is None:
-        return None
-
-    key = str(label).strip()
-    lowered = key.lower()
-    return color_map.get(key) or color_map.get(lowered) or color_map.get(key.upper())
-
-
 def _extract_major_version_family(label: object) -> str:
     text = str(label).strip()
     if text.lower() == "other":
@@ -125,13 +117,10 @@ def save_series_bar_plot(
     out: Path,
     xlabel: str | None = None,
     use_status_colors: bool = False,
-    color_map: dict[str, str] | None = None,
     bar_colors: list[str] | None = None,
-    bar_hatches: list[str] | None = None,
-    legend_handles: list[Patch] | None = None,
+    bar_top_labels: list[str | None] | None = None,
+    legend_handles: list[Any] | None = None,
     legend_title: str | None = None,
-    legend_loc: str = "upper left",
-    legend_bbox_to_anchor: tuple[float, float] | None = (1.02, 1),
 ) -> None:
     series = series.dropna()
     if series.empty:
@@ -139,26 +128,42 @@ def save_series_bar_plot(
         return
 
     plt.figure(figsize=(10, 5))
-    if color_map is not None:
-        plot_colors = [_lookup_color(idx, color_map) or _status_to_color(idx) for idx in series.index]
-    elif bar_colors is None:
+    if bar_colors is None:
         plot_colors = [_status_to_color(idx) for idx in series.index] if use_status_colors else None
     else:
         plot_colors = bar_colors
     ax = plt.gca()
     series.plot(kind="bar", ax=ax, color=plot_colors)
-    if bar_hatches is not None:
-        for patch, hatch in zip(ax.patches, bar_hatches):
-            patch.set_hatch(hatch)
-            patch.set_edgecolor("black")
-            patch.set_linewidth(0.6)
+    if bar_top_labels is not None:
+        max_label_y = 0.0
+        y_top = float(ax.get_ylim()[1])
+        offset = max(y_top * 0.01, 0.15)
+        for patch, label in zip(ax.patches, bar_top_labels):
+            if not label:
+                continue
+            patch_rect = cast(Any, patch)
+            x = patch_rect.get_x() + patch_rect.get_width() / 2
+            y = float(patch_rect.get_height()) + offset
+            max_label_y = max(max_label_y, y)
+            ax.text(
+                x,
+                y,
+                str(label),
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
+                color="black",
+            )
+        if max_label_y > y_top:
+            ax.set_ylim(top=max_label_y + offset)
     ax.yaxis.set_major_formatter(FuncFormatter(format_compact_number))
     ax.set_ylabel(ylabel)
     if xlabel:
         ax.set_xlabel(xlabel)
     plt.xticks(rotation=45, ha="right")
     if legend_handles:
-        ax.legend(handles=legend_handles, title=legend_title, bbox_to_anchor=legend_bbox_to_anchor, loc=legend_loc)
+        ax.legend(handles=legend_handles, title=legend_title, bbox_to_anchor=(1.02, 1), loc="upper left")
     plt.tight_layout()
     plt.savefig(out, dpi=150)
     plt.close()

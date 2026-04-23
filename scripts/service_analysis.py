@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pandas as pd
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from tabulate import SEPARATING_LINE, tabulate
 
@@ -18,7 +19,7 @@ from plotting import (
     save_series_bar_plot,
 )
 from service_types import ServiceAnalyserProto as ServiceAnalyser
-from vuln_lookup import NvdVulnerabilityLookup, MATCH_TIERS
+from vuln_lookup import NvdVulnerabilityLookup, MATCH_TIERS, SEVERITY_LEVELS
 from zgrab2_parser import iter_jsonl
 
 VERSION_TOP_N = 20
@@ -28,6 +29,12 @@ SEVERITY_COLOR_MAP = {
     "high": "#ff7f0e",
     "medium": "#bcbd22",
     "low": "#2ca02c",
+}
+SEVERITY_SHORT_LABEL_MAP = {
+    "critical": "C",
+    "high": "H",
+    "medium": "M",
+    "low": "L",
 }
 OTHER_VERSION_SEVERITY_ORDER = ("critical", "high", "medium", "low", "unknown")
 
@@ -262,7 +269,7 @@ SEVERITY_HATCH_MAP = {
 
 
 def _severity_from_counts(counts: dict[str, int]) -> str | None:
-    for severity in ("critical", "high", "medium", "low"):
+    for severity in SEVERITY_LEVELS:
         if int(counts.get(severity, 0)) > 0:
             return severity
     return None
@@ -352,10 +359,30 @@ def _version_bar_hatches(severities: list[str | None]) -> list[str]:
     return [SEVERITY_HATCH_MAP.get(severity, "") for severity in severities]
 
 
+def _top_version_severity_markers(severities: list[str | None]) -> list[str | None]:
+    return [SEVERITY_SHORT_LABEL_MAP.get(severity) for severity in severities]
+
+
+def _top_version_severity_legend_handles() -> list[Line2D]:
+    return [
+        Line2D(
+            [0],
+            [0],
+            linestyle="None",
+            marker=f"$\\mathregular{{{SEVERITY_SHORT_LABEL_MAP[severity]}}}$",
+            markersize=9,
+            color="black",
+            markeredgewidth=0.0,
+            label=severity,
+        )
+        for severity in ("critical", "high", "medium", "low")
+    ]
+
+
 def _version_severity_legend_handles() -> list[Patch]:
     return [
         Patch(facecolor="white", edgecolor="black", hatch=SEVERITY_HATCH_MAP[severity], label=severity)
-        for severity in ("critical", "high", "medium", "low")
+        for severity in SEVERITY_LEVELS
     ]
 
 
@@ -558,14 +585,15 @@ def analyse_generic_service(
     )
 
     top_versions = frame["version"].dropna().value_counts().head(20)
+    top_version_severities = _version_severity_labels(frame, top_versions.index, service, vuln_lookup)
     save_series_bar_plot(
         top_versions,
         ylabel="IPs",
         xlabel="Version",
         out=output_dir / f"{analysis_prefix}_top_versions.png",
         bar_colors=_top_version_bar_colors(top_versions.index),
-        bar_hatches=_version_bar_hatches(_version_severity_labels(frame, top_versions.index, service, vuln_lookup)),
-        legend_handles=_version_severity_legend_handles(),
+        bar_top_labels=_top_version_severity_markers(top_version_severities),
+        legend_handles=_top_version_severity_legend_handles(),
         legend_title="severity",
     )
 
