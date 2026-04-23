@@ -379,7 +379,7 @@ class NvdVulnerabilityLookup:
                     "startIndex": start_index,
                 })}"
 
-                with requests.get(url, headers=headers, stream=True, timeout=30) as response:
+                with requests.get(url, headers=headers, stream=True, timeout=60) as response:
                     response.raise_for_status()
                     response.raw.decode_content = True
                     payload: NvdApiResponse = json.load(response.raw)

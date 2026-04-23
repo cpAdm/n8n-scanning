@@ -127,7 +127,6 @@ def save_service_success_hilbert_plot(
 
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.imshow(masked_grid, origin="lower", interpolation="nearest", cmap=cmap, vmin=0, vmax=max(0, len(csp_names) - 1))
-    ax.set_title(f"{service_name} success IPs on Hilbert curve (order={order})")
     ax.set_xticks([])
     ax.set_yticks([])
 
@@ -144,8 +143,8 @@ def save_service_success_hilbert_plot(
         frameon=False,
     )
 
-    fig.tight_layout()
-    fig.savefig(out, dpi=dpi)
+    fig.tight_layout(pad=0.2)
+    fig.savefig(out, dpi=dpi, bbox_inches="tight", pad_inches=0.05)
     plt.close(fig)
 
 
@@ -161,7 +160,6 @@ def save_combined_hilbert_prefix_plot(
 
     fig, ax = plt.subplots(figsize=(13, 9))
     ax.imshow(masked_grid, origin="lower", interpolation="nearest", cmap=cmap, vmin=0, vmax=max(0, len(csp_names) - 1))
-    ax.set_title(f"All CSP IPv4 prefixes on Hilbert curve (order={order})")
     ax.set_xticks([])
     ax.set_yticks([])
 

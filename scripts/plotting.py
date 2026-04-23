@@ -1,10 +1,11 @@
-from pathlib import Path
 import re
 from itertools import cycle
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.colors import to_hex
+from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter, PercentFormatter
 
 from zgrab2_parser import StatusValue
@@ -56,7 +57,17 @@ def format_compact_number(value: float, *_args) -> str:
 
 
 def _status_to_color(label: object) -> str:
+    # noinspection PyTypeChecker
     return STATUS_COLOR_MAP.get(str(label).strip().lower(), UNKNOWN_STATUS_COLOR)
+
+
+def _lookup_color(label: object, color_map: dict[str, str] | None) -> str | None:
+    if color_map is None:
+        return None
+
+    key = str(label).strip()
+    lowered = key.lower()
+    return color_map.get(key) or color_map.get(lowered) or color_map.get(key.upper())
 
 
 def _extract_major_version_family(label: object) -> str:
@@ -76,7 +87,7 @@ def _version_family_sort_key(family: str) -> tuple[int, int | str]:
     return 0, int(family)
 
 
-def _build_version_family_colors(labels: list[object]) -> list[str]:
+def build_version_family_colors(labels: list[object]) -> list[str]:
     indices_by_family: dict[str, list[int]] = {}
     for idx, label in enumerate(labels):
         family = _extract_major_version_family(label)
@@ -110,53 +121,44 @@ def _build_version_family_colors(labels: list[object]) -> list[str]:
 
 def save_series_bar_plot(
     series: pd.Series,
-    title: str,
     ylabel: str,
     out: Path,
+    xlabel: str | None = None,
     use_status_colors: bool = False,
+    color_map: dict[str, str] | None = None,
+    bar_colors: list[str] | None = None,
+    bar_hatches: list[str] | None = None,
+    legend_handles: list[Patch] | None = None,
+    legend_title: str | None = None,
+    legend_loc: str = "upper left",
+    legend_bbox_to_anchor: tuple[float, float] | None = (1.02, 1),
 ) -> None:
     series = series.dropna()
     if series.empty:
-        print(f"WARNING: skipping empty plot '{title}' (no data to visualize)")
+        print(f"WARNING: skipping empty plot (no data to visualize)")
         return
 
     plt.figure(figsize=(10, 5))
-    bar_colors = [_status_to_color(idx) for idx in series.index] if use_status_colors else None
-    series.plot(kind="bar", color=bar_colors)
-    plt.gca().yaxis.set_major_formatter(FuncFormatter(format_compact_number))
-    # plt.title(title)
-    plt.ylabel(ylabel)
+    if color_map is not None:
+        plot_colors = [_lookup_color(idx, color_map) or _status_to_color(idx) for idx in series.index]
+    elif bar_colors is None:
+        plot_colors = [_status_to_color(idx) for idx in series.index] if use_status_colors else None
+    else:
+        plot_colors = bar_colors
+    ax = plt.gca()
+    series.plot(kind="bar", ax=ax, color=plot_colors)
+    if bar_hatches is not None:
+        for patch, hatch in zip(ax.patches, bar_hatches):
+            patch.set_hatch(hatch)
+            patch.set_edgecolor("black")
+            patch.set_linewidth(0.6)
+    ax.yaxis.set_major_formatter(FuncFormatter(format_compact_number))
+    ax.set_ylabel(ylabel)
+    if xlabel:
+        ax.set_xlabel(xlabel)
     plt.xticks(rotation=45, ha="right")
-    plt.tight_layout()
-    plt.savefig(out, dpi=150)
-    plt.close()
-
-
-def save_stacked_bar_plot(
-    table: pd.DataFrame,
-    title: str,
-    ylabel: str,
-    out: Path,
-    top_n: int | None = None,
-) -> None:
-    plot_table = table.sort_index()
-    if top_n is not None and top_n > 0:
-        totals = plot_table.sum(axis=1).sort_values(ascending=False)
-        keep = totals.head(top_n).index
-        plot_table = plot_table.loc[keep]
-
-    if plot_table.empty:
-        print(f"WARNING: skipping empty stacked plot '{title}' (no data to visualize)")
-        return
-
-    plt.figure(figsize=(12, 6))
-    status_colors = [_status_to_color(col) for col in plot_table.columns]
-    plot_table.plot(kind="bar", stacked=True, ax=plt.gca(), color=status_colors)
-    plt.gca().yaxis.set_major_formatter(FuncFormatter(format_compact_number))
-    # plt.title(title)
-    plt.ylabel(ylabel)
-    plt.xticks(rotation=45, ha="right")
-    plt.legend(title="status", bbox_to_anchor=(1.02, 1), loc="upper left")
+    if legend_handles:
+        ax.legend(handles=legend_handles, title=legend_title, bbox_to_anchor=legend_bbox_to_anchor, loc=legend_loc)
     plt.tight_layout()
     plt.savefig(out, dpi=150)
     plt.close()
@@ -164,36 +166,118 @@ def save_stacked_bar_plot(
 
 def save_horizontal_stacked_100_plot(
     table: pd.DataFrame,
-    title: str,
     xlabel: str,
     out: Path,
-    top_n: int | None = None,
-    legend_title: str = "version",
+    top_n: int,
+    legend_title: str,
+    bar_colors: list[str] | None = None,
+    legend_handles: list[Patch] | None = None,
+    bar_hatches: list[str] | None = None,
+    annotate_values: bool = True,
+    annotation_threshold: float = 4.0,
+    annotate_totals: bool = True,
+    total_label_padding_pct: float = 12.0,
+    total_label_fontsize: float = 8,
+    total_label_color: str = "#666666",
+    extra_legend_handles: list[Patch] | None = None,
+    extra_legend_title: str | None = None,
+    legend_loc: str = "upper left",
+    legend_bbox_to_anchor: tuple[float, float] | None = (1.02, 1),
+    legend_fontsize: float = 8,
+    extra_legend_loc: str = "upper left",
+    extra_legend_bbox_to_anchor: tuple[float, float] | None = (1.02, 0.45),
+    extra_legend_ncol: int = 1,
+    extra_legend_fontsize: float = 8,
 ) -> None:
     plot_table = table.sort_index()
     if top_n is not None and top_n > 0:
-        totals = plot_table.sum(axis=1).sort_values(ascending=False)
-        keep = totals.head(top_n).index
+        totals = plot_table.sum(axis=1).rename("total").reset_index()
+        totals = totals.sort_values(by=["total", totals.columns[0]], ascending=[False, True], kind="mergesort")
+        keep = totals.head(top_n).iloc[:, 0]
         plot_table = plot_table.loc[keep]
+        plot_table = plot_table.sort_index()
 
     if plot_table.empty:
-        print(f"WARNING: skipping empty 100% stacked plot '{title}' (no data to visualize)")
+        print(f"WARNING: skipping empty 100% stacked plot (no data to visualize)")
         return
 
+    raw_table = plot_table.copy()
     totals = plot_table.sum(axis=1).replace(0, pd.NA)
     plot_table = plot_table.div(totals, axis=0).fillna(0.0) * 100.0
 
     plt.figure(figsize=(12, 6))
-    version_colors = _build_version_family_colors(list(plot_table.columns))
-    plot_table.plot(kind="barh", stacked=True, ax=plt.gca(), color=version_colors)
-    plt.gca().xaxis.set_major_formatter(PercentFormatter(xmax=100))
-    # plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel("")
+    version_colors = bar_colors or build_version_family_colors(list(plot_table.columns))
+    ax = plt.gca()
+    plot_table.plot(kind="barh", stacked=True, ax=ax, color=version_colors)
+    ax.invert_yaxis()
+    if bar_hatches is not None:
+        for container, hatch in zip(ax.containers, bar_hatches):
+            for patch in getattr(container, "patches", []):
+                patch.set_hatch(hatch)
+                patch.set_edgecolor("black")
+                patch.set_linewidth(0.4)
+    if annotate_values:
+        for container, column in zip(ax.containers, raw_table.columns):
+            for patch, raw_value in zip(getattr(container, "patches", []), raw_table[column].tolist()):
+                width = float(patch.get_width())
+                if width < annotation_threshold or raw_value <= 0:
+                    continue
+                x = patch.get_x() + width / 2
+                y = patch.get_y() + patch.get_height() / 2
+                facecolor = patch.get_facecolor()
+                luminance = 0.2126 * facecolor[0] + 0.7152 * facecolor[1] + 0.0722 * facecolor[2]
+                text_color = "black" if luminance > 0.6 else "white"
+                ax.text(
+                    x,
+                    y,
+                    format_compact_number(float(raw_value)),
+                    ha="center",
+                    va="center",
+                    fontsize=8,
+                    color=text_color,
+                    clip_on=True,
+                )
+    if annotate_totals:
+        totals = raw_table.sum(axis=1)
+        for patch, total in zip(getattr(ax.containers[0], "patches", []), totals.tolist()):
+            if total <= 0:
+                continue
+            y = patch.get_y() + patch.get_height() / 2
+            ax.text(
+                100.0 + total_label_padding_pct * 0.5,
+                y,
+                format_compact_number(float(total)),
+                ha="center",
+                va="center",
+                fontsize=total_label_fontsize,
+                color=total_label_color,
+                clip_on=False,
+            )
+    ax.xaxis.set_major_formatter(PercentFormatter(xmax=100))
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("")
+    if annotate_totals and total_label_padding_pct > 0:
+        ax.set_xlim(0, 100.0 + total_label_padding_pct)
     plt.yticks(rotation=0)
-    plt.legend(title=legend_title, bbox_to_anchor=(1.02, 1), loc="upper left")
+    main_legend = ax.legend(
+        handles=legend_handles,
+        title=legend_title,
+        bbox_to_anchor=legend_bbox_to_anchor,
+        loc=legend_loc,
+        fontsize=legend_fontsize,
+        title_fontsize=legend_fontsize + 1,
+    )
+    if extra_legend_handles:
+        ax.add_artist(main_legend)
+        ax.legend(
+            handles=extra_legend_handles,
+            title=extra_legend_title or "severity",
+            bbox_to_anchor=extra_legend_bbox_to_anchor,
+            loc=extra_legend_loc,
+            ncol=extra_legend_ncol,
+            fontsize=extra_legend_fontsize,
+            title_fontsize=extra_legend_fontsize + 1,
+        )
     plt.tight_layout()
-    plt.savefig(out, dpi=150)
+    plt.savefig(out, dpi=150, bbox_inches="tight", pad_inches=0.1)
     plt.close()
-
-

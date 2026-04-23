@@ -1,26 +1,40 @@
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
+from matplotlib.patches import Patch
 from tabulate import SEPARATING_LINE, tabulate
 
 from csp_loader import CspLookup
 from hilbert_prefix_plots import save_service_success_hilbert_plot
-from plotting import ensure_output_dir, save_horizontal_stacked_100_plot, save_series_bar_plot, save_stacked_bar_plot
+from plotting import (
+    build_version_family_colors,
+    ensure_output_dir,
+    OTHER_VERSION_COLOR,
+    STATUS_COLOR_MAP,
+    UNKNOWN_STATUS_COLOR,
+    save_horizontal_stacked_100_plot,
+    save_series_bar_plot,
+)
 from service_types import ServiceAnalyserProto as ServiceAnalyser
 from vuln_lookup import NvdVulnerabilityLookup, MATCH_TIERS
 from zgrab2_parser import iter_jsonl
 
-TOP_VALUE_MAX_WIDTH = 120
-COUNT_LABEL_WIDTH = 12
-VERSION_TOP_N = 10
-CSP_TOP_N_FOR_VERSION_PLOT = 25
+VERSION_TOP_N = 20
+UNKNOWN_SEVERITY_COLOR = "#7f7f7f"
+SEVERITY_COLOR_MAP = {
+    "critical": "#d62728",
+    "high": "#ff7f0e",
+    "medium": "#bcbd22",
+    "low": "#2ca02c",
+}
+OTHER_VERSION_SEVERITY_ORDER = ("critical", "high", "medium", "low", "unknown")
 
 
 def format_top_count_and_value_lines(items: Any) -> tuple[str, str]:
     pairs = list(items)
-    counts = "\n".join(f"{int(count):>{COUNT_LABEL_WIDTH},}" for value, count in pairs)
+    counts = "\n".join(f"{int(count):>{12},}" for value, count in pairs)
     values = "\n".join(str(value) for value, count in pairs)
     return counts, values
 
@@ -137,8 +151,8 @@ def print_distribution_table(
     service: ServiceAnalyser,
     module_key_counters: dict[tuple[str, str], Counter[str]],
     total_key_counters: dict[str, Counter[str]],
-    top_n: int = 5,
-    top_value_max_width: int = TOP_VALUE_MAX_WIDTH,
+    top_n: int,
+    top_value_max_width: int,
 ):
     table_rows: list[Any] = []
     keys = sorted(total_key_counters)
@@ -172,7 +186,45 @@ def print_distribution_table(
     )
 
 
-def build_version_mix_by_csp_table(frame: pd.DataFrame, version_top_n: int = VERSION_TOP_N) -> pd.DataFrame:
+def build_version_mix_by_csp_table(
+    frame: pd.DataFrame,
+    service: ServiceAnalyser,
+    vuln_lookup: NvdVulnerabilityLookup,
+    version_top_n: int = VERSION_TOP_N,
+) -> pd.DataFrame:
+    raw_versions = frame["version"]
+    version_series = raw_versions[raw_versions.notna()].apply(normalize_counter_value)
+    known_versions = version_series[~version_series.str.lower().isin({"none", "nan", ""})]
+
+    if known_versions.empty:
+        return pd.DataFrame()
+
+    version_frame = frame.loc[known_versions.index, ["csp", "vuln_result"]].copy()
+    version_frame = version_frame[version_frame["csp"].notna()]
+    if version_frame.empty:
+        return pd.DataFrame()
+
+    version_frame["version"] = known_versions.loc[version_frame.index]
+    top_versions = version_frame["version"].value_counts().head(version_top_n).index
+    version_frame["version_grouped"] = version_frame["version"].where(version_frame["version"].isin(top_versions), pd.NA)
+    other_mask = version_frame["version_grouped"].isna()
+    if other_mask.any():
+        version_frame.loc[other_mask, "version_grouped"] = version_frame.loc[other_mask, "vuln_result"].map(
+            lambda result: _other_version_bucket_for_result(result, service, vuln_lookup)
+        )
+
+    plot_table = version_frame.groupby(["csp", "version_grouped"]).size().unstack(fill_value=0)
+    ordered_columns = [version for version in top_versions if version in plot_table.columns]
+    ordered_columns.extend(
+        bucket
+        for bucket in (_other_version_bucket_label(severity) for severity in OTHER_VERSION_SEVERITY_ORDER)
+        if bucket in plot_table.columns and bucket not in ordered_columns
+    )
+
+    return plot_table.reindex(columns=ordered_columns, fill_value=0)
+
+
+def build_version_counts_by_csp_table(frame: pd.DataFrame, version_top_n: int = VERSION_TOP_N) -> pd.DataFrame:
     raw_versions = frame["version"]
     version_series = raw_versions[raw_versions.notna()].apply(normalize_counter_value)
     known_versions = version_series[~version_series.str.lower().isin({"none", "nan", ""})]
@@ -194,10 +246,173 @@ def build_version_mix_by_csp_table(frame: pd.DataFrame, version_top_n: int = VER
 
     plot_table = version_frame.groupby(["csp", "version_grouped"]).size().unstack(fill_value=0)
     ordered_columns = [version for version in top_versions if version in plot_table.columns]
-    if "Other" in plot_table.columns:
+    if "Other" in plot_table.columns and "Other" not in ordered_columns:
         ordered_columns.append("Other")
 
     return plot_table.reindex(columns=ordered_columns, fill_value=0)
+
+
+# https://matplotlib.org/stable/gallery/shapes_and_collections/hatch_style_reference.html
+SEVERITY_HATCH_MAP = {
+    "critical": "xx",
+    "high": "///",
+    "medium": "\\\\",
+    "low": "..",
+}
+
+
+def _severity_from_counts(counts: dict[str, int]) -> str | None:
+    for severity in ("critical", "high", "medium", "low"):
+        if int(counts.get(severity, 0)) > 0:
+            return severity
+    return None
+
+
+def _version_exact_range_cve_ids(result: Any) -> list[str]:
+    exact_ids = set(result.cve_ids_by_confidence.get("exact", []))
+    range_ids = set(result.cve_ids_by_confidence.get("range", []))
+    return sorted(exact_ids | range_ids)
+
+
+def _top_version_bar_colors(versions: pd.Series) -> list[str]:
+    return build_version_family_colors(list(versions))
+
+
+def _version_severity_labels(
+    frame: pd.DataFrame,
+    versions: pd.Series,
+    service: ServiceAnalyser,
+    vuln_lookup: NvdVulnerabilityLookup,
+) -> list[str | None]:
+    severities: list[str | None] = []
+    for version in versions:
+        severities.append(_version_highest_severity_for_version(frame, version, service, vuln_lookup))
+
+    return severities
+
+
+def _version_highest_severity_for_version(
+    frame: pd.DataFrame,
+    version: object,
+    service: ServiceAnalyser,
+    vuln_lookup: NvdVulnerabilityLookup,
+) -> str | None:
+    version_rows = frame[(frame["version"] == version) & frame["vuln_result"].notna()]
+    cve_ids: set[str] = set()
+    for result in version_rows["vuln_result"]:
+        cve_ids.update(_version_exact_range_cve_ids(result))
+
+    if not cve_ids:
+        return None
+
+    severity_counts = vuln_lookup.severity_counts_for_cves(service, sorted(cve_ids))
+    return _severity_from_counts(severity_counts)
+
+
+def _version_row_severity_label(
+    result: Any,
+    service: ServiceAnalyser,
+    vuln_lookup: NvdVulnerabilityLookup,
+) -> str | None:
+    if result is None:
+        return None
+
+    cve_ids = _version_exact_range_cve_ids(result)
+    if not cve_ids:
+        return None
+
+    severity_counts = vuln_lookup.severity_counts_for_cves(service, cve_ids)
+    return _severity_from_counts(severity_counts)
+
+
+def _other_version_bucket_label(severity: str | None) -> str:
+    return f"Other::{severity or 'unknown'}"
+
+
+def _other_version_bucket_for_result(
+    result: Any,
+    service: ServiceAnalyser,
+    vuln_lookup: NvdVulnerabilityLookup,
+) -> str:
+    return _other_version_bucket_label(_version_row_severity_label(result, service, vuln_lookup))
+
+
+def _is_other_version_bucket(column: object) -> bool:
+    return str(column).startswith("Other::")
+
+
+def _other_bucket_severity(column: object) -> str | None:
+    text = str(column)
+    if not text.startswith("Other::"):
+        return None
+    return text.split("::", 1)[1]
+
+
+def _version_bar_hatches(severities: list[str | None]) -> list[str]:
+    return [SEVERITY_HATCH_MAP.get(severity, "") for severity in severities]
+
+
+def _version_severity_legend_handles() -> list[Patch]:
+    return [
+        Patch(facecolor="white", edgecolor="black", hatch=SEVERITY_HATCH_MAP[severity], label=severity)
+        for severity in ("critical", "high", "medium", "low")
+    ]
+
+
+def _version_color_legend_handles(versions: list[object]) -> list[Patch]:
+    colors = build_version_family_colors(versions)
+    return [Patch(facecolor=color, edgecolor="black", label=str(version)) for version, color in zip(versions, colors)]
+
+
+def _version_mix_version_legend_handles(columns: list[object]) -> list[Patch]:
+    top_versions = [column for column in columns if not _is_other_version_bucket(column)]
+    handles = _version_color_legend_handles(top_versions)
+    if any(_is_other_version_bucket(column) for column in columns):
+        handles.append(Patch(facecolor=OTHER_VERSION_COLOR, edgecolor="black", label="Other"))
+    return handles
+
+
+def _version_mix_bar_colors(columns: list[object]) -> list[str]:
+    top_versions = [column for column in columns if not _is_other_version_bucket(column)]
+    top_version_colors = dict(zip(top_versions, build_version_family_colors(top_versions)))
+    colors: list[str] = []
+    for column in columns:
+        if _is_other_version_bucket(column):
+            colors.append(OTHER_VERSION_COLOR)
+        else:
+            colors.append(top_version_colors[column])
+    return colors
+
+
+def _version_mix_bar_hatches(
+    frame: pd.DataFrame,
+    columns: list[object],
+    service: ServiceAnalyser,
+    vuln_lookup: NvdVulnerabilityLookup,
+) -> list[str]:
+    hatches: list[str] = []
+    for column in columns:
+        if _is_other_version_bucket(column):
+            hatches.append(SEVERITY_HATCH_MAP.get(_other_bucket_severity(column), ""))
+            continue
+
+        severity = _version_highest_severity_for_version(frame, column, service, vuln_lookup)
+        hatches.append(SEVERITY_HATCH_MAP.get(severity, ""))
+    return hatches
+
+
+def _status_legend_handles(statuses: list[object]) -> list[Patch]:
+    return [
+        Patch(facecolor=_status_color(status), edgecolor="black", label=str(status))
+        for status in statuses
+    ]
+
+
+def _status_color(status: object) -> str:
+    status_key = str(status).strip().lower()
+    if status_key in STATUS_COLOR_MAP:
+        return STATUS_COLOR_MAP[cast(Any, status_key)]
+    return UNKNOWN_STATUS_COLOR
 
 
 def print_vulnerabilities_table(
@@ -281,31 +496,21 @@ def print_vulnerabilities_table(
         lambda cve_ids: ", ".join(cve_ids[:5])
     )
 
-    for confidence in MATCH_TIERS:
-        subset = externally_exploitable[externally_exploitable["vuln_confidence"] == confidence]
-        if subset.empty:
-            continue
-
-        summary = (
-            subset.groupby(["version"], dropna=False)
-            .agg(
-                ips=("ip", "count"),
-                max_cve_count=("vuln_net_no_priv_count", "max"),
-                sample_cves=("vuln_net_no_priv_top_cves", "first"),
-            )
-            .sort_values(["ips", "max_cve_count"], ascending=False)
-            .head(top_n)
-            .reset_index()
-        )
-
-        print(f"\nConfidence: {confidence} (top {top_n})")
-        print(
-            tabulate(
-                summary,
-                headers=["version", "ips", "CVEs", "sample CVEs"],
-                showindex=False,
-            )
-        )
+    externally_exploitable["vuln_severity_counts"] = externally_exploitable["vuln_net_no_priv_ids"].map(
+        lambda cve_ids: vuln_lookup.severity_counts_for_cves(service, cve_ids)
+    )
+    externally_exploitable["vuln_critical"] = externally_exploitable["vuln_severity_counts"].map(
+        lambda counts: int(counts.get("critical", 0))
+    )
+    externally_exploitable["vuln_high"] = externally_exploitable["vuln_severity_counts"].map(
+        lambda counts: int(counts.get("high", 0))
+    )
+    externally_exploitable["vuln_medium"] = externally_exploitable["vuln_severity_counts"].map(
+        lambda counts: int(counts.get("medium", 0))
+    )
+    externally_exploitable["vuln_low"] = externally_exploitable["vuln_severity_counts"].map(
+        lambda counts: int(counts.get("low", 0))
+    )
 
 
 def analyse_generic_service(
@@ -331,37 +536,56 @@ def analyse_generic_service(
         return
 
     status_by_csp = frame.groupby(["csp", "status"]).size().rename("count").reset_index()
-    save_stacked_bar_plot(
-        status_by_csp.pivot(index="csp", columns="status", values="count").fillna(0),
-        title=f"{service.display_name} status by CSP",
-        ylabel="IPs",
+    status_by_csp_table = status_by_csp.pivot(index="csp", columns="status", values="count").fillna(0)
+    save_horizontal_stacked_100_plot(
+        status_by_csp_table,
+        xlabel="Share of IPs",
         out=output_dir / f"{analysis_prefix}_status_by_csp.png",
         top_n=25,
+        legend_title="Status",
+        bar_colors=[_status_color(status) for status in status_by_csp_table.columns],
+        legend_handles=_status_legend_handles(list(status_by_csp_table.columns)),
     )
 
+    overall_status = frame["status"].value_counts()
     save_series_bar_plot(
-        frame["status"].value_counts(),
-        title=f"{service.display_name} overall status distribution",
+        overall_status,
         ylabel="IPs",
         out=output_dir / f"{analysis_prefix}_overall_status.png",
         use_status_colors=True,
+        legend_handles=_status_legend_handles(list(overall_status.index)),
+        legend_title="Status",
     )
 
+    top_versions = frame["version"].dropna().value_counts().head(20)
     save_series_bar_plot(
-        frame["version"].dropna().value_counts().head(20),
-        title=f"{service.display_name} versions/banners (top 20)",
+        top_versions,
         ylabel="IPs",
+        xlabel="Version",
         out=output_dir / f"{analysis_prefix}_top_versions.png",
+        bar_colors=_top_version_bar_colors(top_versions.index),
+        bar_hatches=_version_bar_hatches(_version_severity_labels(frame, top_versions.index, service, vuln_lookup)),
+        legend_handles=_version_severity_legend_handles(),
+        legend_title="severity",
     )
 
-    version_mix_by_csp = build_version_mix_by_csp_table(frame, version_top_n=VERSION_TOP_N)
+    version_mix_by_csp = build_version_mix_by_csp_table(frame, service=service, vuln_lookup=vuln_lookup, version_top_n=VERSION_TOP_N)
+    version_mix_columns = list(version_mix_by_csp.columns)
     save_horizontal_stacked_100_plot(
         version_mix_by_csp,
-        title=f"{service.display_name} version mix by CSP (100% stacked)",
         xlabel="Share of IPs",
         out=output_dir / f"{analysis_prefix}_version_mix_by_csp_100pct.png",
-        top_n=CSP_TOP_N_FOR_VERSION_PLOT,
+        top_n=VERSION_TOP_N,
         legend_title="version",
+        bar_colors=_version_mix_bar_colors(version_mix_columns),
+        legend_handles=_version_mix_version_legend_handles(version_mix_columns),
+        legend_fontsize=7,
+        bar_hatches=_version_mix_bar_hatches(frame, version_mix_columns, service, vuln_lookup),
+        extra_legend_handles=_version_severity_legend_handles(),
+        extra_legend_title="severity",
+        extra_legend_loc="lower left",
+        extra_legend_bbox_to_anchor=(1.02, 0.02),
+        extra_legend_fontsize=8,
     )
 
     success_frame = frame.loc[frame["status"] == "success", ["csp", "ip"]].dropna(subset=["csp", "ip"]).copy()
@@ -379,4 +603,4 @@ def analyse_generic_service(
     print_stats_table(service, frame)
     print_versions_table(service, frame, top_n=5)
     print_vulnerabilities_table(service, frame, vuln_lookup=vuln_lookup, top_n=5)
-    print_distribution_table(service, module_key_counters, total_key_counters, top_n=5)
+    print_distribution_table(service, module_key_counters, total_key_counters, 5, 120)
