@@ -1,7 +1,5 @@
 from typing import Any, Protocol
 
-from zgrab2_parser import BaseScanResponse
-
 
 class ServiceAnalyserProto(Protocol):
     name: str
@@ -9,3 +7,11 @@ class ServiceAnalyserProto(Protocol):
     nvd_cpe_prefixes: tuple[str, ...]
 
     def get_version(self, result: dict[str, Any] | None) -> str | None: ...
+
+    def extra_analysis(
+        self,
+        frame: Any,
+        csp_lookup: Any,
+        output_root: Any,
+        vuln_lookup: Any,
+    ) -> None: ...

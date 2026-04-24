@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any
 
+from tabulate import tabulate
+
 from csp_loader import CspLookup
 from service_analysis import analyse_generic_service
 from service_types import ServiceAnalyserProto
@@ -23,15 +25,29 @@ class ServiceAnalyser(ServiceAnalyserProto):
                 vuln_lookup: NvdVulnerabilityLookup):
         analyse_generic_service(self, jsonl_input_file, csp_lookup, output_root, vuln_lookup)
 
+    def extra_analysis(self, frame: Any, csp_lookup: Any, output_root: Any, vuln_lookup: Any) -> None:
+        return None
+
 
 # TODO Also interesting:
 #  result.build_info.build_environment.target_os
-#  Read databases: jq -r '.data.mongodb.result.database_info // empty' data/2026-03-26T15-33-23-646Z-zgrab2-output.json | sort -u
-#   - also seems to indicate that some databases have been pwned
 class MongoDbService(ServiceAnalyser):
     name = "mongodb"
     display_name = "MongoDB"
     nvd_cpe_prefixes = ("cpe:2.3:a:mongodb:mongodb:",)
+
+    def extra_analysis(self, frame, csp_lookup, output_root, vuln_lookup):
+        database_name_counts = frame["database_names"].explode().dropna().value_counts()
+        total_count = int(database_name_counts.sum())
+        print(f"\n[{self.name}] MongoDB database names from database_info (top 10):")
+        print(
+            tabulate(
+                [*database_name_counts.head(10).items(), ("TOTAL", total_count)],
+                headers=["Database name", "Count"],
+                intfmt=",",
+                colalign=("left", "right"),
+            )
+        )
 
     def get_version(self, result):
         return result.get("build_info", {}).get("version")
@@ -95,7 +111,7 @@ class RdpService(ServiceAnalyser):
     nvd_cpe_prefixes = ()
 
     def get_version(self, result):
-        return result.get("ntlm", {}).get("os_version") # E.g. 10.0.20348.0, 6.3.9600.0
+        return result.get("ntlm", {}).get("os_version")  # E.g. 10.0.20348.0, 6.3.9600.0
 
 
 # TODO Also see other interesting fields of result.server_id

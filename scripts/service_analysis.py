@@ -75,6 +75,11 @@ def collect_service_rows_and_counters(
         version = service.get_version(result or {})
         version_text = version.strip() if version else None
         vuln_result = vuln_lookup.lookup(service, version_text) if version_text else None
+        database_names: tuple[str, ...] = ()
+
+        if service.name == "mongodb":
+            databases = ((result or {}).get("database_info") or {}).get("databases", [])
+            database_names = tuple(name for database in databases if (name := database.get("name")))
 
         rows.append(
             {
@@ -84,6 +89,7 @@ def collect_service_rows_and_counters(
                 "has_result": bool(result),
                 "version": version_text,
                 "vuln_result": vuln_result,
+                "database_names": database_names,
             }
         )
 
@@ -602,3 +608,4 @@ def analyse_generic_service(
     print_versions_table(service, frame, top_n=5)
     print_vulnerabilities_table(service, frame, vuln_lookup=vuln_lookup, top_n=5)
     print_distribution_table(service, module_key_counters, total_key_counters, 5, 120)
+    service.extra_analysis(frame, csp_lookup, output_root, vuln_lookup)
