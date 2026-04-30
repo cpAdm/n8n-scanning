@@ -33,13 +33,21 @@ jobs:
               repo: "n8n"
             });
 
-            // Extract version from tag (e.g. "n8n@1.120.4")
-            const match = release.tag_name.match(/\d+\.\d+\.\d+/);
-            if (!match?.[0]) {
-              core.setFailed(`Could not extract version from tag: ${release.tag_name}`);
+            // Prefer structured metadata first, then fall back to less structured fields.
+            let version = null;
+            for (const source of [release.tag_name, release.name, release.target_commitish]) {
+              const match = source.match(/\d+\.\d+\.\d+/);
+              if (match?.[0]) {
+                version = match[0];
+                break;
+              }
+            }
+
+            if (!version) {
+              core.setFailed(`Could not extract version from release metadata: ${release.tag_name}`);
               return;
             }
-            core.setOutput("tag", match[0]);
+            core.setOutput("tag", version);
 
       - name: Read current version from Dockerfile
         id: current
