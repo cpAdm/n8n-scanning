@@ -70,12 +70,12 @@ sudo nft list ruleset
 
 Remarks:
 
-- The workflow needs to be published, else scan is skipped, so e.g. use the schedule trigger to run it at a specific
-  time or interval.
+- The workflow needs to be published, otherwise the scan is skipped, so e.g. use the schedule trigger to run it at a
+  specific time or interval.
 
 ### Blocklist
 
-To responsible scan, allow users to opt out via your contact page. See `data/blocklist.txt` for a list of IP's (with
+To scan responsibly, allow users to opt out via your contact page. See `data/blocklist.txt` for a list of IPs (with
 optionally port number) that already
 have [requested in the past](https://gitlab.utwente.nl/m7711402/internet-wide-scans) to opt out.
 
@@ -85,28 +85,6 @@ See `./nodes` for all available custom (action) nodes. This includes one for ret
 popular scanning tools NMap, ZMap, Zgrab2, and MASSCAN.
 
 When you make changes, build and start the container again with the aforementioned command.
-
-# Resources
-
-- [Contribution guide](CONTRIBUTING.md)
-- [n8n docs](https://docs.n8n.io/)
-
-## FAQ
-
-Q1: ZMAP hangs before it actually starts scanning.
-
-A1: It might get stuck at getting the MAC address. Try specifying it yourselves with `--gateway-mac` (see
-`ip neigh show` for the right value)
-
-## Tips
-
-### Monitor network traffic throughput
-
-Find the right network interface with `ip -br link`, and then monitor the traffic on that interface with:
-
-```bash
-ifstat -i eth0 1 
-```
 
 ## Analysis of scan results
 
@@ -129,3 +107,25 @@ python3 -m venv .venv                                         # Create a virtual
 ./.venv/bin/python -m pip install -r scripts/requirements.txt # Install required Python packages in the virtual environment
 ./.venv/bin/python scripts/main.py --help                     # Run the script with the --help flag to see usage instructions
 ```
+
+## FAQ
+
+Q1: ZMAP hangs before it actually starts scanning.
+
+A1: It might get stuck at getting the MAC address. Try specifying it yourself with `--gateway-mac` (see
+`ip neigh show` for the right value)
+
+## Tips
+
+### Monitor network traffic throughput
+
+Find the right network interface with `ip -br link`, and then monitor the traffic on that interface with:
+
+```bash
+ifstat -i eth0 1 
+```
+
+# Resources
+
+- [Contribution guide](CONTRIBUTING.md)
+- [n8n docs](https://docs.n8n.io/)
