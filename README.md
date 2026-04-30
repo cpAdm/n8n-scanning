@@ -6,7 +6,7 @@
 
 
 > [!IMPORTANT]
-> This project leverages tools designed for internet-wide network scanning (e.g., Zmap, Masscan, Nmap). It is intended
+> This project leverages tools designed for Internet-wide network scanning (e.g., Zmap, Masscan, Nmap). It is intended
 > STRICTLY for educational and research purposes. You are solely responsible for ensuring that your network operations
 > comply with all applicable local, state, and federal laws, and that you have obtained the necessary authorizations
 > before scanning any networks or systems you do not own.
@@ -57,13 +57,13 @@ Get a working container with n8n, the scanning tools, and the contact page:
 You will now have the following features:
 
 - Contact page available at https://DOMAIN_NAME/.
-- N8n editor available at https://DOMAIN_NAME/n8n. Create an account and log in to access the n8n workflow
+- n8n editor available at https://DOMAIN_NAME/n8n. Create an account and log in to access the n8n workflow.
 - Redirect any HTTP traffic to use HTTPS. Traefik will automatically generate TLS/SSL certificates for your domain using
   Let's Encrypt.
 - Data is persisted using Docker volumes, so you can stop and start the container without losing your n8n workflows,
   certificates, etc.
 
-### Shutting sown
+### Shutting Down
 
 Stop the containers when done:
 
@@ -88,7 +88,9 @@ sudo nft list ruleset
 
 ## Framework Usage
 
-[//]: # (TODO Add more usage examples on how to get started, include workflow templates, etc.)
+Below is an example of a typical scanning workflow using the custom nodes:
+
+![Master scanning workflow example](data/n8n-master-scanning-workflow.png)
 
 Remarks:
 
@@ -103,8 +105,8 @@ have [requested in the past](https://gitlab.utwente.nl/m7711402/internet-wide-sc
 
 ### Custom n8n Nodes
 
-See `./nodes` for all available custom (action) nodes. This includes one for retrieving IP ranges from CSPs and for the
-popular scanning tools NMap, ZMap, Zgrab2, and MASSCAN.
+See `./n8n-nodes/nodes` for all available custom (action) nodes. This includes one for retrieving IP ranges from CSPs
+and for the popular scanning tools NMap, ZMap, Zgrab2, and MASSCAN.
 
 When you make changes, build and start the container again with the aforementioned command.
 
