@@ -3,3 +3,4 @@
 /web/**
 /traefik/dynamic/traefik.yml
 .venv/
+scripts/__pycache__/

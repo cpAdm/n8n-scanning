@@ -4,7 +4,6 @@
 [![Test Docker container](https://github.com/cpAdm/n8n-scanning/actions/workflows/test-tools.yml/badge.svg)](https://github.com/cpAdm/n8n-scanning/actions/workflows/test-tools.yml)
 [![Update n8n version](https://github.com/cpAdm/n8n-scanning/actions/workflows/update-n8n.yml/badge.svg)](https://github.com/cpAdm/n8n-scanning/actions/workflows/update-n8n.yml)
 
-## Disclaimer
 
 > [!IMPORTANT]
 > This project leverages tools designed for internet-wide network scanning (e.g., Zmap, Masscan, Nmap). It is intended
@@ -24,7 +23,7 @@ This project provides a fully containerized environment for orchestrating large-
 - **Contact page**: A lightweight contact page providing transparency about your scans and a channel to handle IP
   opt-out/blocklist requests.
 
-## Getting started
+## Getting Started
 
 Get a working container with n8n, the scanning tools, and the contact page:
 
@@ -64,7 +63,7 @@ You will now have the following features:
 - Data is persisted using Docker volumes, so you can stop and start the container without losing your n8n workflows,
   certificates, etc.
 
-### Shutting down
+### Shutting sown
 
 Stop the containers when done:
 
@@ -87,7 +86,7 @@ See the new firewall config:
 sudo nft list ruleset
 ```
 
-## Usage
+## Framework Usage
 
 [//]: # (TODO Add more usage examples on how to get started, include workflow templates, etc.)
 
@@ -102,14 +101,14 @@ To scan responsibly, allow users to opt out via your contact page. See `data/blo
 optionally port number) that already
 have [requested in the past](https://gitlab.utwente.nl/m7711402/internet-wide-scans) to opt out.
 
-### Custom n8n nodes
+### Custom n8n Nodes
 
 See `./nodes` for all available custom (action) nodes. This includes one for retrieving IP ranges from CSPs and for the
 popular scanning tools NMap, ZMap, Zgrab2, and MASSCAN.
 
 When you make changes, build and start the container again with the aforementioned command.
 
-## Analysis of scan results
+## Analysis of Scan Results
 
 To quickly analyse the JSONL output of ZGrab2, you can use the bundled [jq](https://jqlang.org/) CLI tool.
 See [ZGrab2 schemas](https://github.com/zmap/zgrab2/tree/master/zgrab2_schemas/zgrab2) for the available fields to
@@ -140,7 +139,7 @@ A1: It might get stuck at getting the MAC address. Try specifying it yourself wi
 
 ## Tips
 
-### Monitor network traffic throughput
+### Monitor Network Traffic Throughput
 
 Find the right network interface with `ip -br link`, and then monitor the traffic on that interface with:
 
