@@ -1,5 +1,15 @@
 # Contributing
 
+## Directory Structure
+
+Here's a quick overview of the main directories:
+- `data/` – Where output data (such as `.json` results, `.png` analysis plots) and the `blocklist.txt` are stored.
+- `n8n-nodes/` – The TypeScript source code for the custom n8n scanning nodes (e.g., Nmap, Masscan, Zmap, Zgrab2).
+- `scripts/` – Python scripts to parse, analyze, and plot the scanning results.
+- `tests/` – E2E tests for the scanning n8n workflows.
+- `traefik/` – Configuration files for the Traefik reverse proxy.
+- `web/` / `web-template/` – HTML/CSS setup for the responsible contact page hosted by the container.
+
 ## Commits
 
 This repro is following [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/).
@@ -23,4 +33,4 @@ Currently, there is limited testing in place:
 ## Tips for Remote development
 
 When using WebStorm, you can use a remote host to deploy to. Do exclude all build folders like `node_modules` and `dist`
-to limit the amount of files that need to be transferred. 
+to limit the amount of files that need to be transferred.

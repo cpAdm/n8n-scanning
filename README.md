@@ -1,15 +1,37 @@
-# Large scale network scanning with n8n
+# Large scale Internet scanning with n8n
 
 [![Build custom n8n nodes](https://github.com/cpAdm/n8n-scanning/actions/workflows/build-nodes.yml/badge.svg)](https://github.com/cpAdm/n8n-scanning/actions/workflows/build-nodes.yml)
 [![Test Docker container](https://github.com/cpAdm/n8n-scanning/actions/workflows/test-tools.yml/badge.svg)](https://github.com/cpAdm/n8n-scanning/actions/workflows/test-tools.yml)
 [![Update n8n version](https://github.com/cpAdm/n8n-scanning/actions/workflows/update-n8n.yml/badge.svg)](https://github.com/cpAdm/n8n-scanning/actions/workflows/update-n8n.yml)
+
+## Disclaimer
+
+> [!IMPORTANT]
+> This project leverages tools designed for internet-wide network scanning (e.g., Zmap, Masscan, Nmap). It is intended
+> STRICTLY for educational and research purposes. You are solely responsible for ensuring that your network operations
+> comply with all applicable local, state, and federal laws, and that you have obtained the necessary authorizations
+> before scanning any networks or systems you do not own.
+
+## Architecture Overview
+
+This project provides a fully containerized environment for orchestrating large-scale network scans:
+
+- **n8n**: The core workflow automation engine that orchestrates the scanning processes.
+- **Custom nodes**: Native integration of popular scanning tools (Zmap, Masscan, Zgrab2, Nmap) directly inside n8n
+  workflows.
+- **Traefik**: Acts as a reverse proxy, automatically handling HTTPS via Let's Encrypt for the n8n dashboard and contact
+  page.
+- **Contact page**: A lightweight contact page providing transparency about your scans and a channel to handle IP
+  opt-out/blocklist requests.
 
 ## Getting started
 
 Get a working container with n8n, the scanning tools, and the contact page:
 
 1. Install the following tools:
-    - [Docker Engine](https://docs.docker.com/engine/install/)
+    - [Git](https://git-scm.com/install)
+    - [Docker Engine](https://docs.docker.com/engine/install/) (Make sure **Docker Compose v2** is available, as this
+      project uses `docker compose`)
 
 2. Clone this repository:
     ```bash
@@ -19,6 +41,7 @@ Get a working container with n8n, the scanning tools, and the contact page:
 3. Copy `.env.default` to `.env`, and adjust variables where needed:
     1. `DOMAIN_NAME`: the host name where your server is running
     2. `SSL_EMAIL`: the email address to use for the TLS/SSL certificate creation
+    3. *Note: You can also configure other n8n environment variables in this file.*
 
 4. Copy `traefik.default.yml` to `traefik/dynamic/traefik.yml`, and replace placeholders:
     1. `DOMAIN_NAME`: the host name where your server is running
