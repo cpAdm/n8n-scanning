@@ -1,5 +1,5 @@
 # GitHub workflow automatically creates a PR whenever new version is released
-ARG N8N_VERSION=2.11.3
+ARG N8N_VERSION=2.38.7
 
 FROM node:24-alpine AS nodes-builder
 
